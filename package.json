@@ -1,0 +1,35 @@
+{
+  "name": "cdko",
+  "version": "0.0.1",
+  "description": "Multi-region AWS CDK deployment tool",
+  "type": "module",
+  "main": "src/index.mjs",
+  "bin": {
+    "cdko": "./bin/cdko"
+  },
+  "scripts": {
+    "start": "./bin/cdko"
+  },
+  "keywords": [
+    "aws",
+    "cdk",
+    "multi-region",
+    "deployment",
+    "infrastructure",
+    "devops"
+  ],
+  "author": "Owloops",
+  "license": "MIT",
+  "dependencies": {
+    "zx": "^8.6.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "files": [
+    "src",
+    "bin",
+    "README.md",
+    "LICENSE"
+  ]
+}
