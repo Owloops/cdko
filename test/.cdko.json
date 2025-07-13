@@ -1,0 +1,76 @@
+{
+  "version": "0.1",
+  "stackGroups": {
+    "Production-API": {
+      "unknown-account/unknown-region": {
+        "constructId": "Production-API",
+        "account": "unknown-account",
+        "region": "unknown-region"
+      }
+    },
+    "Production-Database": {
+      "unknown-account/unknown-region": {
+        "constructId": "Production-Database",
+        "account": "unknown-account",
+        "region": "unknown-region"
+      }
+    },
+    "Production-Frontend": {
+      "unknown-account/unknown-region": {
+        "constructId": "Production-Frontend",
+        "account": "unknown-account",
+        "region": "unknown-region"
+      }
+    },
+    "Production-Cache": {
+      "unknown-account/us-east-1": {
+        "constructId": "Production-Cache",
+        "account": "unknown-account",
+        "region": "us-east-1"
+      },
+      "unknown-account/eu-west-1": {
+        "constructId": "Production-Cache-EU",
+        "account": "unknown-account",
+        "region": "eu-west-1"
+      }
+    },
+    "Production-Audit": {
+      "123456789012/unknown-region": {
+        "constructId": "Production-Audit",
+        "account": "123456789012",
+        "region": "unknown-region"
+      }
+    },
+    "Production-Compliance": {
+      "123456789012/us-east-1": {
+        "constructId": "Production-Compliance",
+        "account": "123456789012",
+        "region": "us-east-1"
+      }
+    },
+    "Production-App": {
+      "unknown-account/us-east-1": {
+        "constructId": "Production-App",
+        "account": "unknown-account",
+        "region": "us-east-1"
+      },
+      "unknown-account/eu-central-1": {
+        "constructId": "Production-App-Frankfurt",
+        "account": "unknown-account",
+        "region": "eu-central-1"
+      }
+    },
+    "Production-App-Oregon": {
+      "unknown-account/us-west-2": {
+        "constructId": "Production-App-Oregon",
+        "account": "unknown-account",
+        "region": "us-west-2"
+      }
+    }
+  },
+  "buildCommand": "npm run build",
+  "cdkTimeout": "30m",
+  "suppressNotices": true,
+  "lastUpdated": "2025-07-13T23:03:44.852Z",
+  "updatedBy": "cdko@0.0.1"
+}

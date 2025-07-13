@@ -1,9 +1,0 @@
-{
-  "regions": ["us-east-1", "eu-west-1"],
-  "primaryRegion": "us-east-1",
-  "regionSuffixes": {
-    "us-east-1": "",
-    "eu-west-1": "-EU"
-  },
-  "buildCommand": "npm run build"
-}

@@ -3,88 +3,68 @@
  * Builds and executes CDK commands with proper configuration
  */
 
-import { $, quote } from 'zx';
-import { getRegionSuffix } from './config.mjs';
+import { $, quote } from "zx";
 
-export async function runCdkCommand(region, stackName, command, profile, options = {}) {
-  const { 
-    verbose = false, 
-    parameters = [], 
-    includeDeps = false, 
+export async function runCdkCommand(
+  region,
+  stackName,
+  command,
+  profile,
+  options = {}
+) {
+  const {
+    verbose = false,
+    parameters = [],
+    includeDeps = false,
     context = [],
-    progress = 'events',
-    force = false,
-    noColor = false,
-    quiet = false,
-    outputsFile = '',
     executeChangeset = false,
-    cdkOptions = '',
-    primaryRegion,
-    signal
+    cdkOptions = "",
+    signal,
   } = options;
-  
-  const cdkArgs = [command, '--profile', quote(profile)];
-  
+
+  const cdkArgs = [command, "--profile", quote(profile), "--no-notices"];
+
   if (verbose) {
-    cdkArgs.push('-v');
-  }
-  
-  if (noColor) {
-    cdkArgs.push('--no-color');
-  }
-  
-  if (quiet && (command === 'synth' || command === 'diff')) {
-    cdkArgs.push('--quiet');
+    cdkArgs.push("-v");
   }
 
   const outputDir = `cdk.out.${region}`;
-  cdkArgs.push('--output', quote(outputDir));
-  
-  context.forEach(ctx => {
-    cdkArgs.push('--context', ctx);
+  cdkArgs.push("--output", quote(outputDir));
+
+  context.forEach((ctx) => {
+    cdkArgs.push("--context", ctx);
   });
 
-  if (command === 'deploy') {
-    if (!includeDeps) cdkArgs.push('--exclusively');
-    if (!executeChangeset) cdkArgs.push('--no-execute');
-    cdkArgs.push('--require-approval=never');
-    if (force) cdkArgs.push('--force');
-    if (progress === 'bar') cdkArgs.push('--progress', 'bar');
-    if (outputsFile) cdkArgs.push('--outputs-file', quote(`${outputsFile}.${region}.json`));
-  } else if (command === 'destroy') {
-    if (!includeDeps) cdkArgs.push('--exclusively');
-    if (force) cdkArgs.push('--force');
+  if (command === "deploy") {
+    if (!includeDeps) cdkArgs.push("--exclusively");
+    if (!executeChangeset) cdkArgs.push("--no-execute");
+    cdkArgs.push("--require-approval=never");
   }
-  
-  parameters.forEach(param => {
-    if (includeDeps && !param.includes(':')) {
-      const regionSuffix = getRegionSuffix(region, options.regionSuffixes || {});
-      const baseStackName = regionSuffix && stackName.endsWith(regionSuffix) 
-        ? stackName.slice(0, -regionSuffix.length)
-        : stackName;
-      cdkArgs.push('--parameters', `${baseStackName}:${param}`);
+
+  parameters.forEach((param) => {
+    if (includeDeps && !param.includes(":")) {
+      cdkArgs.push("--parameters", `${stackName}:${param}`);
     } else {
-      cdkArgs.push('--parameters', param);
+      cdkArgs.push("--parameters", param);
     }
   });
-  
+
   if (cdkOptions) {
-    const additionalArgs = cdkOptions.split(/\s+/).filter(arg => arg);
+    const additionalArgs = cdkOptions.split(/\s+/).filter((arg) => arg);
     cdkArgs.push(...additionalArgs);
   }
-  
+
   cdkArgs.push(quote(stackName));
 
-  const shouldBeQuiet = quiet && command !== 'diff' && command !== 'synth';
-  
-  const timeout = command === 'deploy' 
-    ? (process.env.CDK_DEPLOY_TIMEOUT || '30m')
-    : (process.env.CDK_DEFAULT_TIMEOUT || '10m');
-  
+  const timeout = process.env.CDK_TIMEOUT || "30m";
+
   return await $({
-    env: { ...process.env, ...(region === primaryRegion ? {} : { AWS_REGION: region }) },
+    env: {
+      ...process.env,
+      AWS_REGION: region,
+    },
     signal,
     timeout,
-    quiet: ['diff', 'synth'].includes(command) ? false : shouldBeQuiet || !verbose,
+    quiet: ["diff"].includes(command) ? false : !verbose,
   })`cdk ${cdkArgs}`;
 }

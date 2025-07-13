@@ -1,21 +1,25 @@
 /**
- * Deployment orchestrator
- * Manages deployment across regions in parallel or sequential mode
+ * Deployment orchestrator v2
+ * Manages deployment across regions using stack detection
  */
 
-import { logger } from '../utils/logger.mjs';
-import { runCdkCommand } from './executor.mjs';
-import { buildStackName } from './config.mjs';
+import { logger } from "../utils/logger.mjs";
+import { runCdkCommand } from "./executor.mjs";
+import { StackDetector } from "./stack-detector.mjs";
+import { resolveDeployments } from "./stack-matcher.mjs";
 
-export async function deployToRegion(region, args, config, signal) {
-  const stackName = buildStackName(region, args.environment, args.stackPattern, config);
+/**
+ * Deploy a specific stack to a specific region
+ */
+export async function deployStack(deployment, args, signal) {
+  const { region, constructId, stackName } = deployment;
 
   console.log();
   console.log(`${logger.region(region)} → ${logger.stack(stackName)}`);
 
   if (args.dryRun) {
-    logger.info(`Would deploy: ${stackName} to ${region}`);
-    return { success: true, region };
+    logger.info(`Would deploy: ${constructId} to ${region}`);
+    return { success: true, region, stackName };
   }
 
   const startTime = Date.now();
@@ -23,70 +27,121 @@ export async function deployToRegion(region, args, config, signal) {
   try {
     const executorOptions = {
       ...args,
-      primaryRegion: config.primaryRegion || 'us-east-1',
-      regionSuffixes: config.regionSuffixes || {},
-      signal
+      signal,
     };
 
     switch (args.mode) {
-      case 'diff':
-        await runCdkCommand(region, stackName, 'diff', args.profile, executorOptions);
+      case "diff":
+        await runCdkCommand(
+          region,
+          constructId,
+          "diff",
+          args.profile,
+          executorOptions
+        );
         break;
 
-      case 'changeset':
+      case "changeset":
         logger.info(`Creating changeset for ${stackName}`);
-        await runCdkCommand(region, stackName, 'deploy', args.profile, executorOptions);
-        logger.success('Changeset created');
+        await runCdkCommand(
+          region,
+          constructId,
+          "deploy",
+          args.profile,
+          executorOptions
+        );
+        logger.success("Changeset created");
         break;
 
-      case 'synth':
-        logger.info(`Synthesizing ${stackName}`);
-        await runCdkCommand(region, stackName, 'synth', args.profile, executorOptions);
-        logger.success('Synthesis complete');
-        break;
-
-      case 'execute':
+      case "execute":
         logger.info(`Deploying ${stackName}`);
         const executeOptions = { ...executorOptions, executeChangeset: true };
-        await runCdkCommand(region, stackName, 'deploy', args.profile, executeOptions);
+        await runCdkCommand(
+          region,
+          constructId,
+          "deploy",
+          args.profile,
+          executeOptions
+        );
         logger.success(`Deployed ${stackName}`);
-        break;
-        
-      case 'destroy':
-        if (!args.force) {
-          logger.warn(`Would destroy ${stackName} in ${region}`);
-          logger.info('Use --force flag to actually destroy stacks');
-        } else {
-          logger.info(`Destroying ${stackName}`);
-          await runCdkCommand(region, stackName, 'destroy', args.profile, executorOptions);
-          logger.success(`Destroyed ${stackName}`);
-        }
         break;
     }
 
     const duration = ((Date.now() - startTime) / 1000).toFixed(1);
     logger.info(`Completed in ${duration}s`);
-    return { success: true, region, duration };
+    return { success: true, region, stackName, duration };
   } catch (e) {
     logger.error(`Failed to deploy ${stackName}`);
-    return { success: false, region, error: e };
+    return { success: false, region, stackName, error: e };
   }
 }
 
-export async function deployToAllRegions(regions, args, config, signal) {
-  const results = [];
-  
-  if (args.sequential) {
+/**
+ * Deploy to all regions based on stack configuration
+ */
+export async function deployToAllRegions(regions, args, signal) {
+  const detector = new StackDetector();
+  const stackConfig = await detector.loadConfig();
+
+  let deployments = [];
+
+  if (stackConfig) {
+    deployments = resolveDeployments(args.stackPattern, stackConfig, regions);
+
+    if (deployments.length === 0) {
+      logger.warn(
+        "No matching stacks found in .cdko.json, falling back to traditional deployment"
+      );
+    }
+  }
+
+  if (deployments.length === 0) {
+    logger.info("Using traditional pattern-based deployment");
     for (const region of regions) {
-      results.push(await deployToRegion(region, args, config, signal));
+      const stackName = args.stackPattern;
+      deployments.push({
+        region,
+        constructId: stackName,
+        stackName,
+      });
+    }
+  }
+
+  console.log();
+  logger.info(`Planning to deploy ${deployments.length} stack(s):`);
+  const stackGroups = {};
+  deployments.forEach((d) => {
+    if (!stackGroups[d.stackName]) {
+      stackGroups[d.stackName] = [];
+    }
+    stackGroups[d.stackName].push(d.region);
+  });
+
+  Object.entries(stackGroups).forEach(([stack, regions]) => {
+    logger.info(`${stack} → ${regions.join(", ")}`);
+  });
+
+  const results = [];
+
+  if (args.sequential) {
+    for (const deployment of deployments) {
+      results.push(await deployStack(deployment, args, signal));
     }
   } else {
-    logger.info(`Processing ${regions.length} regions in parallel...`);
+    logger.info(
+      `Processing ${deployments.length} deployment(s) in parallel...`
+    );
 
-    const deploymentPromises = regions.map((region) =>
-      deployToRegion(region, args, config, signal).then(
-        (result) => ({ ...result, status: 'fulfilled' }),
-        (error) => ({ region, success: false, error, status: 'rejected' })
+    const deploymentPromises = deployments.map((deployment) =>
+      deployStack(deployment, args, signal).then(
+        (result) => ({ ...result, status: "fulfilled" }),
+        (error) => ({
+          region: deployment.region,
+          stackName: deployment.stackName,
+          success: false,
+          error,
+          status: "rejected",
+        })
       )
     );
 
@@ -96,25 +151,50 @@ export async function deployToAllRegions(regions, args, config, signal) {
     console.log();
     results.forEach((result) => {
       if (result.success) {
-        logger.success(`${result.region}: Completed successfully`);
+        logger.success(
+          `${result.region}: ${result.stackName} completed successfully`
+        );
       } else {
-        const errorMsg = result.error?.message || result.error?.stderr || result.error?.stdout || 'Unknown error';
-        
-        const lines = errorMsg.split('\n').filter(line => line.trim());
-        const meaningfulError = lines.find(line => 
-          line.includes('No stacks match') ||
-          line.includes('already exists') ||
-          line.includes('AccessDenied') ||
-          line.includes('is not authorized') ||
-          line.includes('CloudFormation error') ||
-          line.includes('Error:') ||
-          line.includes('failed:')
-        ) || lines[0] || 'Check output above for details';
-        
-        logger.error(`${result.region}: ${meaningfulError.trim()}`);
+        const errorMsg =
+          result.error?.message ||
+          result.error?.stderr ||
+          result.error?.stdout ||
+          "Unknown error";
+
+        const lines = errorMsg.split("\n").filter((line) => line.trim());
+        const meaningfulError =
+          lines.find(
+            (line) =>
+              line.includes("No stacks match") ||
+              line.includes("already exists") ||
+              line.includes("AccessDenied") ||
+              line.includes("is not authorized") ||
+              line.includes("CloudFormation error") ||
+              line.includes("Error:") ||
+              line.includes("failed:")
+          ) ||
+          lines[0] ||
+          "Check output above for details";
+
+        logger.error(
+          `${result.region}: ${result.stackName} - ${meaningfulError.trim()}`
+        );
       }
     });
   }
 
   return results;
+}
+
+/**
+ * Legacy function for backward compatibility
+ */
+export async function deployToRegion(region, args, signal) {
+  const stackName = args.stackPattern;
+  const deployment = {
+    region,
+    constructId: stackName,
+    stackName,
+  };
+  return deployStack(deployment, args, signal);
 }

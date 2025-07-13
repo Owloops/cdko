@@ -3,130 +3,111 @@
  * Maintains backward compatibility with original multi-region.mjs
  */
 
-import { argv } from 'zx';
-import { logger } from '../utils/logger.mjs';
+import { argv } from "zx";
+import { logger } from "../utils/logger.mjs";
 
 export function parseArgs() {
   const args = {
-    profile: argv.p || argv.profile || '',
-    environment: argv.e || argv.environment || '',
-    stackPattern: argv.s || argv.stack || '',
-    regions: argv.r || argv.regions || 'all',
-    mode: argv.m || argv.mode || 'changeset',
+    _: argv._ || [],
+    profile: argv.p || argv.profile || "",
+    stackPattern: argv.s || argv.stack || "",
+    regions: argv.r || argv.regions || "all",
+    mode: argv.m || argv.mode || "changeset",
     sequential: argv.x || argv.sequential || false,
-    dryRun: argv.d || argv['dry-run'] || false,
-    list: argv.l || argv.list || false,
+    dryRun: argv.d || argv["dry-run"] || false,
     help: argv.h || argv.help || false,
     verbose: argv.v || argv.verbose || false,
-    includeDeps: argv.i || argv['include-deps'] || false,
-    parameters: [],
-    context: [],
-    cdkOptions: argv['cdk-opts'] || '',
-    force: argv.force || false,
-    progress: argv.progress || 'events',
-    noColor: argv['no-color'] || false,
-    quiet: argv.quiet || false,
-    outputsFile: argv['outputs-file'] || ''
+    includeDeps: argv["include-deps"] || false,
+    parameters: argv.parameters || [],
+    context: argv.context || [],
+    cdkOptions: argv["cdk-opts"] || "",
   };
 
-  const paramArray = argv.P || argv.parameters || argv.parameter || [];
+  const paramArray = argv.parameters || [];
   args.parameters = Array.isArray(paramArray) ? paramArray : [paramArray];
-  args.parameters = args.parameters.filter(p => p);
+  args.parameters = args.parameters.filter((p) => p);
 
-  const contextArray = argv.c || argv.context || [];
+  const contextArray = argv.context || [];
   args.context = Array.isArray(contextArray) ? contextArray : [contextArray];
-  args.context = args.context.filter(c => c);
+  args.context = args.context.filter((c) => c);
+
+  const cdkOptsIndex = process.argv.findIndex(arg => arg === '--cdk-opts');
+  if (cdkOptsIndex !== -1 && cdkOptsIndex + 1 < process.argv.length) {
+    args.cdkOptions = process.argv[cdkOptsIndex + 1];
+  }
 
   return args;
 }
 
 export function validateArgs(args) {
   if (!args.profile) {
-    logger.error('AWS profile is required');
-    printUsage();
-    process.exit(1);
-  }
-
-  if (args.list) {
-    return;
-  }
-
-  if (!args.environment) {
-    logger.error('Environment is required');
+    logger.error("AWS profile is required");
     printUsage();
     process.exit(1);
   }
 
   if (!args.stackPattern) {
-    logger.error('Stack pattern is required');
+    logger.error("Stack pattern is required");
     printUsage();
     process.exit(1);
   }
 
-  const validModes = ['diff', 'synth', 'changeset', 'execute', 'destroy'];
+  const validModes = ["diff", "changeset", "execute"];
   if (!validModes.includes(args.mode)) {
-    logger.error(`Mode must be one of: ${validModes.join(', ')}`);
-    process.exit(1);
-  }
-
-  if (args.mode === 'destroy' && !args.dryRun && !args.force) {
-    logger.warn('Destroy mode requires --force flag for safety');
+    logger.error(`Mode must be one of: ${validModes.join(", ")}`);
     process.exit(1);
   }
 }
 
 export function printUsage() {
-  const scriptName = 'cdko';
+  const scriptName = "cdko";
   console.log(`
 Multi-Region CDK Deployment Tool
 
 Deploy CDK stacks across multiple AWS regions with enhanced control.
 
-Usage: ${scriptName} [OPTIONS]
+Usage: 
+  ${scriptName} init                   Initialize CDKO configuration
+  ${scriptName} [OPTIONS]              Deploy stacks
 
 Options:
   -p, --profile PROFILE      AWS profile to use (required)
-  -e, --environment ENV      Environment name (required)
   -s, --stack PATTERN        Stack name pattern to deploy (required)
   -r, --regions REGIONS      Comma-separated regions or 'all' (default: from config)
-  -m, --mode MODE           Deployment mode: diff, synth, changeset, execute, destroy
+  -m, --mode MODE           Deployment mode: diff, changeset, execute
                             (default: changeset)
   -x, --sequential          Deploy regions sequentially (default: parallel)
   -d, --dry-run            Show what would be deployed without executing
-  -l, --list               List all deployed stacks in specified regions
   -v, --verbose            Enable verbose CDK output
-  -i, --include-deps        Include dependency stacks
-  -P, --parameters KEY=VAL  CDK parameters (can be used multiple times)
+  --include-deps            Include dependency stacks (default: exclude dependencies)
+  --parameters KEY=VAL      CDK parameters (can be used multiple times)
                             Format: KEY=VALUE or STACK:KEY=VALUE
-  -c, --context KEY=VAL     CDK context values (can be used multiple times)
-  --force                   Force destructive operations
-  --progress MODE           Progress display: events or bar (default: events)
-  --no-color               Disable colored output
-  --quiet                  Suppress non-error output
-  --outputs-file FILE      Write stack outputs to file
-  --cdk-opts "OPTIONS"      Additional CDK options (in quotes)
+  --context KEY=VAL         CDK context values (can be used multiple times)
+  --cdk-opts "OPTIONS"      Pass CDK command flags directly (for diff/deploy/global flags)
+                            Example: --cdk-opts "--force --quiet --outputs-file out.json"
   -h, --help               Show this help message
 
 Examples:
-  ${scriptName} -p MyProfile -e Production -s MyStack
-  ${scriptName} -p MyProfile -e Production -s MyStack -r us-east-1,eu-west-1
-  ${scriptName} -p MyProfile -e Production -s MyStack -m execute
-  ${scriptName} -p MyProfile -l
-  ${scriptName} -p MyProfile -e Production -s MyStack -P MinSize=2 -P MaxSize=10
-  ${scriptName} -p MyProfile -e Production -s MyStack -m destroy --force
+  ${scriptName} init                                                     # Initialize CDKO configuration
+  ${scriptName} -p MyProfile -s Production-MyStack                      # Deploy to all regions
+  ${scriptName} -p MyProfile -s Production-MyStack -r us-east-1,eu-west-1
+  ${scriptName} -p MyProfile -s Production-MyStack -m execute
+  ${scriptName} -p MyProfile -s Production-MyStack --parameters MinSize=2 --parameters MaxSize=10
+  ${scriptName} -p MyProfile -s Production-MyStack --cdk-opts "--force --quiet"
+
+Stack Pattern Matching:
+  Use wildcards (*) to match multiple stacks:
+  ${scriptName} -p MyProfile -s "Production-App*"        # Matches Production-App, Production-App-Web, etc.
+  ${scriptName} -p MyProfile -s "Production-*"          # Matches all Production stacks
+  ${scriptName} -p MyProfile -s "*"                     # Matches all stacks
+  ${scriptName} -p MyProfile -s "Production-App,Staging-Cache"  # Multiple patterns
 
 Configuration:
-  Create a .cdko.json file in your project root:
-  {
-    "regions": ["us-east-1", "eu-west-1"],
-    "primaryRegion": "us-east-1",
-    "regionSuffixes": {
-      "us-east-1": "",
-      "eu-west-1": "-EU"
-    },
-    "buildCommand": "npm run build",
-    "deployTimeout": "30m",     // Timeout for deploy commands (default: 30m)
-    "defaultTimeout": "10m"     // Timeout for other commands (default: 10m)
-  }
+  Run '${scriptName} init' to auto-detect your CDK stacks and create/update .cdko.json
+  
+  CDKO uses stack detection to map your CDK construct IDs to deployments:
+  - Automatically handles region-specific construct names
+  - Supports environment-agnostic and region-specific stacks
+  - Falls back to traditional naming if no configuration exists
 `);
 }

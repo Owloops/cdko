@@ -6,9 +6,10 @@ CDKO is a command-line tool that deploys AWS CDK stacks across multiple regions.
 
 - **Multi-region deployment**: Deploy to multiple AWS regions in parallel or sequentially
 - **Stack targeting**: Deploy specific stacks using pattern matching
-- **Multiple deployment modes**: Support for diff, synth, changeset, execute, and destroy operations
+- **Multiple deployment modes**: Support for diff, changeset, and execute operations
 - **Flexible configuration**: Configure via CLI arguments, environment variables, or JSON config files
 - **Safe defaults**: Creates changesets for review before execution, requires explicit flags for destructive operations
+- **Clean output**: Suppresses CDK notices and telemetry messages for focused deployment information
 - **Minimal dependencies**: Built with zx for reliable shell scripting
 
 ## Installation
@@ -26,6 +27,9 @@ npm install -g cdko
 ## Quick Start
 
 ```bash
+# Initialize CDKO configuration
+cdko init
+
 # Deploy a stack to all configured regions
 cdko -p MyProfile -e Production -s MyStack
 
@@ -34,9 +38,6 @@ cdko -p MyProfile -e Production -s MyStack -r us-east-1,eu-west-1
 
 # Preview changes without deploying
 cdko -p MyProfile -e Production -s MyStack -m diff
-
-# List deployed stacks
-cdko -p MyProfile -l
 ```
 
 ## CLI Options
@@ -44,94 +45,185 @@ cdko -p MyProfile -l
 | Option | Description | Default |
 |--------|-------------|---------|
 | `-p, --profile` | AWS profile to use | *Required* |
-| `-e, --environment` | Environment (e.g., Production, Staging) | *Required* |
 | `-s, --stack` | Stack name pattern to deploy | *Required* |
-| `-r, --regions` | Comma-separated regions or 'all' | `all` |
-| `-m, --mode` | Deployment mode: `diff`, `synth`, `changeset`, `execute`, `destroy` | `changeset` |
+| `-r, --regions` | Comma-separated regions or 'all' | from config |
+| `-m, --mode` | Deployment mode: `diff`, `changeset`, `execute` | `changeset` |
 | `-x, --sequential` | Deploy regions sequentially instead of parallel | `false` |
 | `-d, --dry-run` | Show what would be deployed without executing | `false` |
-| `-l, --list` | List all deployed stacks | `false` |
 | `-v, --verbose` | Enable verbose CDK output | `false` |
-| `-i, --include-deps` | Include dependent stacks | `false` |
-| `-P, --parameters` | CDK parameters (KEY=VALUE or STACK:KEY=VALUE) | - |
-| `-c, --context` | CDK context values | - |
-| `--force` | Force destructive operations | `false` |
-| `--progress` | Progress display mode (`bar` or `events`) | `events` |
-| `--no-color` | Disable colored output | `false` |
-| `--quiet` | Suppress non-error output | `false` |
-| `--outputs-file` | Write stack outputs to file (region-specific) | - |
-| `--cdk-opts` | Additional CDK options to pass through | - |
+| `--include-deps` | Include dependency stacks (default: exclude dependencies) | `false` |
+| `--parameters` | CDK parameters (KEY=VALUE or STACK:KEY=VALUE) | - |
+| `--context` | CDK context values (KEY=VALUE) | - |
+| `--cdk-opts` | Pass options directly to CDK commands | - |
 
 ## Examples
 
 ```bash
 # Deploy with parameters
-cdko -p MyProfile -e Production -s MyApp -P KeyName=my-key -P InstanceType=t3.micro
+cdko -p MyProfile -s Production-MyApp --parameters KeyName=my-key --parameters InstanceType=t3.micro
 
 # Deploy with stack-specific parameters
-cdko -p MyProfile -e Production -s MyApp -P MyApp:KeyName=my-key
+cdko -p MyProfile -s Production-MyApp --parameters Production-MyApp:KeyName=my-key
+
+# Deploy with context values
+cdko -p MyProfile -s Production-MyApp --context env=production --context feature-flag=enabled
 
 # Sequential deployment with verbose output
-cdko -p MyProfile -e Production -s MyApp -x -v
+cdko -p MyProfile -s Production-MyApp -x -v
 
-# Deploy with progress bar
-cdko -p MyProfile -e Production -s MyApp --progress bar
+# Use CDK options - force deployment and save outputs
+cdko -p MyProfile -s Production-MyApp --cdk-opts "--force --outputs-file outputs.json"
 
-# Save outputs to file (creates outputs.json.us-east-1.json, etc.)
-cdko -p MyProfile -e Production -s MyApp --outputs-file outputs.json
+# Use CDK options - quiet mode with progress events
+cdko -p MyProfile -s Production-MyApp --cdk-opts "--quiet --progress events"
 
-# Destroy stacks with confirmation
-cdko -p MyProfile -e Production -s MyApp -m destroy --force
+# Use CDK options - disable colors
+cdko -p MyProfile -s Production-MyApp --cdk-opts "--no-color"
+
 ```
+
+### Passing Options to CDK
+
+Use `--cdk-opts` to pass CDK command flags directly. These are passed as-is to `cdk diff`, `cdk deploy`, etc:
+
+```bash
+# Common CDK deployment flags:
+--cdk-opts "--force"                    # Force destructive operations
+--cdk-opts "--quiet"                    # Suppress non-error output  
+--cdk-opts "--no-color"                 # Disable colored output
+--cdk-opts "--outputs-file out.json"    # Save outputs to file
+--cdk-opts "--progress events"          # Show deployment events
+
+# Global CDK flags:
+--cdk-opts "--no-version-reporting"     # Disable version reporting
+--cdk-opts "--no-asset-metadata"        # Disable asset metadata
+
+# Multiple flags (space-separated, in quotes):
+--cdk-opts "--force --quiet --outputs-file deployment.json"
+```
+
+**Note**: These are standard CDK flags. See `cdk deploy --help` and `cdk diff --help` for all available options.
+
+### CDK Parameters and Context
+
+**Parameters** (`--parameters`) pass values to your CDK stack parameters:
+
+```bash
+# Basic parameters
+cdko -p MyProfile -s MyStack --parameters KeyName=my-key --parameters InstanceType=t3.micro
+
+# Stack-specific parameters (when deploying multiple stacks)
+cdko -p MyProfile -s "Production-*" --parameters MyStack:KeyName=prod-key
+```
+
+**Context** (`--context`) sets CDK context values that influence synthesis:
+
+```bash
+# Set context for feature flags or environment-specific values
+cdko -p MyProfile -s MyStack --context env=production --context enable-feature=true
+
+# Context affects CDK synthesis behavior
+cdko -p MyProfile -s MyStack --context "@aws-cdk/core:enableStackNameDuplicates=true"
+```
+
+**Key differences:**
+
+- **Parameters**: Runtime values passed to your stack's constructor parameters
+- **Context**: Build-time values that affect how CDK synthesizes your app
 
 ## Configuration
 
-Create a `.cdko.json` file in your project root:
+CDKO uses automatic stack detection to manage deployments across regions. Run `cdko init` to create or update your `.cdko.json` configuration file:
+
+```bash
+# Initialize CDKO configuration by auto-detecting your CDK stacks
+cdko init
+```
+
+This creates a `.cdko.json` file with your detected stacks:
 
 ```json
 {
-  "regions": ["us-east-1", "eu-central-1", "ap-southeast-1"],
-  "primaryRegion": "us-east-1",
-  "regionSuffixes": {
-    "us-east-1": "",
-    "eu-central-1": "-Frankfurt",
-    "ap-southeast-1": "-Singapore"
+  "version": "0.1",
+  "stackGroups": {
+    "Production-MyApp": {
+      "123456789012/us-east-1": {
+        "constructId": "Production-MyApp",
+        "account": "123456789012",
+        "region": "us-east-1"
+      },
+      "123456789012/eu-west-1": {
+        "constructId": "Production-MyApp-EU",
+        "account": "123456789012",
+        "region": "eu-west-1"
+      }
+    }
   },
   "buildCommand": "npm run build",
-  "deployTimeout": "30m",
-  "defaultTimeout": "10m"
+  "cdkTimeout": "30m",
+  "suppressNotices": true,
+  "lastUpdated": "2024-01-15T10:30:00.000Z",
+  "updatedBy": "cdko@1.0.0"
+}
+```
+
+### Stack Detection Benefits
+
+- **Automatic Discovery**: Finds all CDK stacks in your project
+- **Smart Matching**: Maps construct IDs to deployment regions
+- **Pattern Support**: Use wildcards (`*`) to deploy multiple stacks
+- **Fallback Mode**: Works without configuration using traditional naming
+
+### Configuration Options
+
+CDKO automatically generates sensible defaults, but you can customize:
+
+```json
+{
+  "buildCommand": "npm run build",     // Command to build your CDK app
+  "cdkTimeout": "30m",               // Timeout for all CDK operations
+  "suppressNotices": true            // Hide CDK notices (default: true)
 }
 ```
 
 ### Environment Variables
 
-- `ALL_REGIONS` - Override default regions (comma-separated)
-- `PRIMARY_REGION` - Set primary region
-- `REGION_SUFFIXES` - JSON object of region suffixes
-- `STACK_PREFIX` - Custom stack name prefix
-- `STACK_SUFFIX` - Custom stack name suffix
-- `BUILD_COMMAND` - Build command to run before deploy
-- `VALID_ENVIRONMENTS` - Comma-separated valid environments
+- `CDK_BUILD_COMMAND` - Override build command (default: "npm run build")
+- `CDK_TIMEOUT` - Timeout for CDK operations (default: "30m")
+- `CDK_CLI_NOTICES` - Set to "true" to show CDK notices (default: hidden)
+- `CDK_DISABLE_VERSION_CHECK` - Disable CDK version check (set for Production)
 
-### Stack Naming Convention
+### Stack Pattern Matching
 
-CDKO constructs stack names using: `{Environment}-{StackPattern}{RegionSuffix}`
+CDKO supports flexible stack pattern matching:
 
-Example:
+```bash
+# Deploy specific stack
+cdko -p MyProfile -s Production-MyApp
 
-- Command: `cdko -p Profile -e Production -s WebApp`
-- In us-east-1: `Production-WebApp`
-- In eu-central-1: `Production-WebApp-Frankfurt`
+# Deploy all stacks starting with "Production-App"
+cdko -p MyProfile -s "Production-App*"
+
+# Deploy all Production stacks
+cdko -p MyProfile -s "Production-*"
+
+# Deploy all stacks
+cdko -p MyProfile -s "*"
+
+# Deploy multiple patterns
+cdko -p MyProfile -s "Production-App,Staging-Cache,Production-Database"
+```
 
 ## How It Works
 
-1. **Authentication**: Validates AWS profile credentials
-2. **Configuration**: Loads settings from `.cdko.json` and environment variables
-3. **Build**: Runs the build command (unless in destroy mode)
-4. **Deploy**: Executes CDK commands across all specified regions
+1. **Stack Detection**: Automatically discovers CDK stacks using `cdko init`
+2. **Authentication**: Validates AWS profile credentials with SSO support
+3. **Configuration**: Loads settings from `.cdko.json`
+4. **Build**: Runs the build command before deployment
+5. **Deploy**: Executes CDK commands across all specified regions
    - Parallel execution by default (use `-x` for sequential)
    - Each region gets its own `cdk.out.{region}` directory
-   - Region-specific stack naming with configurable suffixes
+   - Smart construct ID mapping for region-specific deployments
 
 ## Error Handling
 

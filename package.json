@@ -8,7 +8,9 @@
     "cdko": "./bin/cdko"
   },
   "scripts": {
-    "start": "./bin/cdko"
+    "start": "./bin/cdko",
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix"
   },
   "keywords": [
     "aws",
@@ -21,7 +23,8 @@
   "author": "Owloops",
   "license": "MIT",
   "dependencies": {
-    "zx": "^8.6.2"
+    "zx": "^8.6.2",
+    "minimatch": "^10.0.3"
   },
   "engines": {
     "node": ">=18.0.0"
@@ -31,5 +34,9 @@
     "bin",
     "README.md",
     "LICENSE"
-  ]
+  ],
+  "devDependencies": {
+    "@eslint/js": "^9.31.0",
+    "eslint": "^9.31.0"
+  }
 }
