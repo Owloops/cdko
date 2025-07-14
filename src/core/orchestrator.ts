@@ -1,29 +1,49 @@
-import { logger } from "../utils/logger.mjs";
-import { runCdkCommand } from "./executor.mjs";
-import { StackManager } from "./stack-manager.mjs";
-import { AccountManager } from "./account-manager.mjs";
-import { CloudAssemblyManager } from "./cloud-assembly.mjs";
+import { logger } from "../utils/logger.ts";
+import { runCdkCommand } from "./executor.ts";
+import { StackManager } from "./stack-manager.ts";
+import type { CdkoConfig } from "./stack-manager.ts";
+import { AccountManager } from "./account-manager.ts";
+import { CloudAssemblyManager } from "./cloud-assembly.ts";
 
-/**
- * Deploy a specific stack to a specific region
- * @param {Object} deployment - Deployment configuration
- * @param {string} deployment.region - AWS region to deploy to
- * @param {string} deployment.constructId - CDK construct ID
- * @param {string} deployment.stackName - Stack name for logging
- * @param {string} [deployment.profile] - AWS profile to use
- * @param {Object} args - CLI arguments
- * @param {string} args.mode - Deployment mode (diff/changeset/execute)
- * @param {boolean} [args.dryRun] - Whether this is a dry run
- * @param {AbortSignal} signal - Abort signal for cancellation
- * @param {string} cloudAssemblyPath - Path to cloud assembly directory
- * @returns {Promise<Object>} Deployment result with success status
- */
+interface Deployment {
+  region: string;
+  constructId: string;
+  stackName: string;
+  profile?: string;
+  accountId?: string;
+  source?: string;
+}
+
+interface DeploymentArgs {
+  mode: string;
+  dryRun?: boolean;
+  profile: string;
+  stackPattern: string;
+  sequential?: boolean;
+  environment?: string;
+  verbose?: boolean;
+  parameters?: string[];
+  includeDeps?: boolean;
+  context?: string[];
+  executeChangeset?: boolean;
+  cdkOptions?: string;
+}
+
+interface DeploymentResult {
+  success: boolean;
+  region: string;
+  stackName: string;
+  duration?: string;
+  error?: unknown;
+  status?: string;
+}
+
 export async function deployStack(
-  deployment,
-  args,
-  signal,
-  cloudAssemblyPath = null
-) {
+  deployment: Deployment,
+  args: DeploymentArgs,
+  signal: AbortSignal,
+  cloudAssemblyPath: string | null = null,
+): Promise<DeploymentResult> {
   const { region, constructId, stackName, profile } = deployment;
   const deployProfile = profile || args.profile;
 
@@ -51,7 +71,7 @@ export async function deployStack(
           constructId,
           "diff",
           deployProfile,
-          executorOptions
+          executorOptions,
         );
         break;
 
@@ -62,7 +82,7 @@ export async function deployStack(
           constructId,
           "deploy",
           deployProfile,
-          executorOptions
+          executorOptions,
         );
         logger.success("Changeset created");
         break;
@@ -75,7 +95,7 @@ export async function deployStack(
           constructId,
           "deploy",
           deployProfile,
-          executeOptions
+          executeOptions,
         );
         logger.success(`Deployed ${stackName}`);
         break;
@@ -90,23 +110,15 @@ export async function deployStack(
   }
 }
 
-/**
- * Deploy to all regions based on stack configuration
- * @param {string[]} regions - List of AWS regions to deploy to
- * @param {Object} args - CLI arguments
- * @param {string} args.profile - AWS profile(s) to use (supports patterns)
- * @param {string} args.stackPattern - Stack pattern to match
- * @param {string} args.mode - Deployment mode (diff/changeset/execute)
- * @param {boolean} [args.sequential] - Deploy sequentially vs parallel
- * @param {boolean} [args.dryRun] - Whether this is a dry run
- * @param {AbortSignal} signal - Abort signal for cancellation
- * @returns {Promise<Object[]>} Array of deployment results
- */
-export async function deployToAllRegions(regions, args, signal) {
+export async function deployToAllRegions(
+  regions: string[],
+  args: DeploymentArgs,
+  signal: AbortSignal,
+): Promise<DeploymentResult[]> {
   const stackManager = new StackManager();
   const stackConfig = await stackManager.loadConfig();
 
-  let deployments = [];
+  let deployments: Deployment[] = [];
 
   const isMultiAccount =
     args.profile.includes(",") ||
@@ -117,20 +129,20 @@ export async function deployToAllRegions(regions, args, signal) {
     deployments = await resolveMultiAccountDeployments(
       args.profile,
       args.stackPattern,
-      stackConfig,
-      regions
+      stackConfig as CdkoConfig,
+      regions,
     );
   } else {
     if (stackConfig) {
       deployments = stackManager.resolveDeployments(
         args.stackPattern,
-        stackConfig,
-        regions
+        stackConfig as CdkoConfig,
+        regions,
       );
 
       if (deployments.length === 0) {
         logger.warn(
-          "No matching stacks found in .cdko.json, falling back to traditional deployment"
+          "No matching stacks found in .cdko.json, falling back to traditional deployment",
         );
       }
     }
@@ -154,18 +166,20 @@ export async function deployToAllRegions(regions, args, signal) {
     }
   }
 
-  const profileAssemblies = new Map();
+  const profileAssemblies = new Map<string, string>();
 
   if (isMultiAccount) {
-    const uniqueProfiles = [...new Set(deployments.map((d) => d.profile))];
+    const uniqueProfiles = [
+      ...new Set(deployments.map((d) => d.profile || args.profile)),
+    ];
 
     logger.info(
-      `Synthesizing cloud assemblies for ${uniqueProfiles.length} profile(s)...`
+      `Synthesizing cloud assemblies for ${uniqueProfiles.length} profile(s)...`,
     );
 
     const synthesisPromises = uniqueProfiles.map(async (profile) => {
       try {
-        const cloudAssembly = new CloudAssemblyManager({});
+        const cloudAssembly = new CloudAssemblyManager();
         const assemblyPath = await cloudAssembly.synthesize({
           stacks: args.stackPattern,
           profile: profile,
@@ -174,26 +188,32 @@ export async function deployToAllRegions(regions, args, signal) {
         });
         profileAssemblies.set(profile, assemblyPath);
         logger.success(
-          `Cloud assembly for profile ${profile} → ${assemblyPath}`
+          `Cloud assembly for profile ${profile} → ${assemblyPath}`,
         );
         return { profile, assemblyPath, success: true };
       } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
         logger.error(
-          `Failed to synthesize for profile ${profile}: ${error.message}`
+          `Failed to synthesize for profile ${profile}: ${errorMessage}`,
         );
         return { profile, error, success: false };
       }
     });
 
     const synthesisResults = await Promise.all(synthesisPromises);
-    const failedSynthesis = synthesisResults.filter(result => !result.success);
-    
+    const failedSynthesis = synthesisResults.filter(
+      (result) => !result.success,
+    );
+
     if (failedSynthesis.length > 0) {
-      throw new Error(`Failed to synthesize ${failedSynthesis.length} profile(s): ${failedSynthesis.map(f => f.profile).join(', ')}`);
+      throw new Error(
+        `Failed to synthesize ${failedSynthesis.length} profile(s): ${failedSynthesis.map((f) => f.profile).join(", ")}`,
+      );
     }
   } else {
     try {
-      const cloudAssembly = new CloudAssemblyManager({});
+      const cloudAssembly = new CloudAssemblyManager();
       const assemblyPath = await cloudAssembly.synthesize({
         stacks: args.stackPattern,
         profile: args.profile,
@@ -201,7 +221,9 @@ export async function deployToAllRegions(regions, args, signal) {
       });
       profileAssemblies.set(args.profile, assemblyPath);
     } catch (error) {
-      logger.error("Failed to synthesize cloud assembly:", error.message);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      logger.error(`Failed to synthesize cloud assembly: ${errorMessage}`);
       throw error;
     }
   }
@@ -209,12 +231,12 @@ export async function deployToAllRegions(regions, args, signal) {
   if (!isMultiAccount) {
     console.log();
     logger.info(`Planning to deploy ${deployments.length} stack(s):`);
-    const stackGroups = {};
+    const stackGroups: { [key: string]: string[] } = {};
     deployments.forEach((d) => {
       if (!stackGroups[d.stackName]) {
         stackGroups[d.stackName] = [];
       }
-      stackGroups[d.stackName].push(d.region);
+      stackGroups[d.stackName]!.push(d.region);
     });
 
     Object.entries(stackGroups).forEach(([stack, regions]) => {
@@ -222,20 +244,24 @@ export async function deployToAllRegions(regions, args, signal) {
     });
   }
 
-  const results = [];
+  const results: DeploymentResult[] = [];
 
   if (args.sequential) {
     for (const deployment of deployments) {
-      const assemblyPath = profileAssemblies.get(deployment.profile);
+      const assemblyPath = profileAssemblies.get(
+        deployment.profile || args.profile,
+      );
       results.push(await deployStack(deployment, args, signal, assemblyPath));
     }
   } else {
     logger.info(
-      `Processing ${deployments.length} deployment(s) in parallel...`
+      `Processing ${deployments.length} deployment(s) in parallel...`,
     );
 
     const deploymentPromises = deployments.map((deployment) => {
-      const assemblyPath = profileAssemblies.get(deployment.profile);
+      const assemblyPath = profileAssemblies.get(
+        deployment.profile || args.profile,
+      );
       return deployStack(deployment, args, signal, assemblyPath).then(
         (result) => ({ ...result, status: "fulfilled" }),
         (error) => ({
@@ -244,7 +270,7 @@ export async function deployToAllRegions(regions, args, signal) {
           success: false,
           error,
           status: "rejected",
-        })
+        }),
       );
     });
 
@@ -255,32 +281,41 @@ export async function deployToAllRegions(regions, args, signal) {
     results.forEach((result) => {
       if (result.success) {
         logger.success(
-          `${result.region}: ${result.stackName} completed successfully`
+          `${result.region}: ${result.stackName} completed successfully`,
         );
       } else {
-        const errorMsg =
-          result.error?.message ||
-          result.error?.stderr ||
-          result.error?.stdout ||
-          "Unknown error";
+        const error = result.error;
+        let errorMsg = "Unknown error";
 
-        const lines = errorMsg.split("\n").filter((line) => line.trim());
+        if (error instanceof Error) {
+          errorMsg = error.message;
+        } else if (error && typeof error === "object" && "stderr" in error) {
+          errorMsg = (error as { stderr: string }).stderr;
+        } else if (error && typeof error === "object" && "stdout" in error) {
+          errorMsg = (error as { stdout: string }).stdout;
+        } else if (typeof error === "string") {
+          errorMsg = error;
+        }
+
+        const lines = errorMsg
+          .split("\n")
+          .filter((line: string) => line.trim());
         const meaningfulError =
           lines.find(
-            (line) =>
+            (line: string) =>
               line.includes("No stacks match") ||
               line.includes("already exists") ||
               line.includes("AccessDenied") ||
               line.includes("is not authorized") ||
               line.includes("CloudFormation error") ||
               line.includes("Error:") ||
-              line.includes("failed:")
+              line.includes("failed:"),
           ) ||
           lines[0] ||
           "Check output above for details";
 
         logger.error(
-          `${result.region}: ${result.stackName} - ${meaningfulError.trim()}`
+          `${result.region}: ${result.stackName} - ${meaningfulError.trim()}`,
         );
       }
     });
@@ -289,20 +324,12 @@ export async function deployToAllRegions(regions, args, signal) {
   return results;
 }
 
-/**
- * Resolves multi-account deployments by combining profiles, accounts, and stacks
- * @param {string} profilePattern - Profile pattern(s) from CLI
- * @param {string} stackPattern - Stack pattern(s) from CLI
- * @param {Object} stackConfig - Stack configuration from .cdko.json
- * @param {Array} requestedRegions - Regions requested via CLI
- * @returns {Promise<Array>} All deployments to be executed with account info
- */
 async function resolveMultiAccountDeployments(
-  profilePattern,
-  stackPattern,
-  stackConfig,
-  requestedRegions
-) {
+  profilePattern: string,
+  stackPattern: string,
+  stackConfig: CdkoConfig,
+  requestedRegions: string[],
+): Promise<Deployment[]> {
   const accountManager = new AccountManager();
 
   const profiles = await accountManager.matchProfiles(profilePattern);
@@ -317,13 +344,13 @@ async function resolveMultiAccountDeployments(
 
   const deploymentTargets = accountManager.createDeploymentTargets(
     accountInfo,
-    requestedRegions
+    requestedRegions,
   );
 
   const stackManager = new StackManager();
   const matchedStacks = stackManager.matchStacks(stackPattern, stackConfig);
 
-  const allDeployments = [];
+  const allDeployments: Deployment[] = [];
 
   if (matchedStacks.length === 0) {
     logger.info("No stack configuration found, using pattern-based deployment");
@@ -373,7 +400,7 @@ async function resolveMultiAccountDeployments(
 
   if (allDeployments.length === 0) {
     logger.warn(
-      "No deployments resolved - check stack configuration and account/region combinations"
+      "No deployments resolved - check stack configuration and account/region combinations",
     );
     return [];
   }
@@ -383,20 +410,16 @@ async function resolveMultiAccountDeployments(
   return allDeployments;
 }
 
-/**
- * Log a summary of planned multi-account deployments
- * @param {Array} deployments - Array of deployment objects
- */
-function logMultiAccountDeploymentSummary(deployments) {
+function logMultiAccountDeploymentSummary(deployments: Deployment[]) {
   console.log();
   logger.info(`Planning ${deployments.length} deployment(s):`);
 
-  const stackGroups = {};
+  const stackGroups: { [key: string]: Deployment[] } = {};
   deployments.forEach((deployment) => {
     if (!stackGroups[deployment.stackName]) {
       stackGroups[deployment.stackName] = [];
     }
-    stackGroups[deployment.stackName].push(deployment);
+    stackGroups[deployment.stackName]!.push(deployment);
   });
 
   Object.entries(stackGroups).forEach(([stackName, stackDeployments]) => {
@@ -412,6 +435,6 @@ function logMultiAccountDeploymentSummary(deployments) {
   console.log();
   logger.info(`Using ${profiles.length} profile(s): ${profiles.join(", ")}`);
   logger.info(
-    `Targeting ${accounts.length} account(s): ${accounts.join(", ")}`
+    `Targeting ${accounts.length} account(s): ${accounts.join(", ")}`,
   );
 }

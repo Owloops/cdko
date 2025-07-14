@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "Multi-region AWS CDK deployment tool",
   "type": "module",
-  "main": "src/index.mjs",
+  "main": "src/index.ts",
   "bin": {
     "cdko": "./bin/cdko"
   },
@@ -17,7 +17,7 @@
     "aws",
     "cdk",
     "multi-region",
-    "multi-account", 
+    "multi-account",
     "deployment",
     "infrastructure",
     "devops",
@@ -35,11 +35,12 @@
     "url": "https://github.com/owloops/cdko/issues"
   },
   "dependencies": {
-    "zx": "^8.6.2",
-    "minimatch": "^10.0.3"
+    "minimatch": "^10.0.3",
+    "zx": "^8.6.2"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=18.0.0",
+    "bun": ">=1.0.0"
   },
   "files": [
     "src",
@@ -49,6 +50,12 @@
   ],
   "devDependencies": {
     "@eslint/js": "^9.31.0",
-    "eslint": "^9.31.0"
+    "@types/bun": "^1.2.18",
+    "@typescript-eslint/eslint-plugin": "^8.37.0",
+    "@typescript-eslint/parser": "^8.37.0",
+    "eslint": "^9.31.0",
+    "eslint-config-prettier": "^10.1.5",
+    "eslint-plugin-prettier": "^5.5.1",
+    "prettier": "^3.6.2"
   }
 }

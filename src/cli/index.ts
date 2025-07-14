@@ -1,10 +1,19 @@
 import { fs, path } from "zx";
-import { logger } from "../utils/logger.mjs";
-import { checkPrerequisites } from "../utils/prerequisites.mjs";
-import { StackManager } from "../core/stack-manager.mjs";
-import { deployToAllRegions } from "../core/orchestrator.mjs";
-import { parseArgs, validateArgs, printUsage } from "./args.mjs";
-import { init } from "./commands/init.mjs";
+import { logger } from "../utils/logger.ts";
+import { checkPrerequisites } from "../utils/prerequisites.ts";
+import { StackManager } from "../core/stack-manager.ts";
+import { deployToAllRegions } from "../core/orchestrator.ts";
+import { parseArgs, validateArgs, printUsage } from "./args.ts";
+import type { ParsedArgs } from "./args.ts";
+import { init } from "./commands/init.ts";
+
+interface DeploymentResult {
+  success: boolean;
+  region: string;
+  stackName: string;
+  duration?: string;
+  error?: any;
+}
 
 const controller = new AbortController();
 
@@ -61,14 +70,16 @@ async function main() {
     changeset: "Creating changesets",
     execute: "Deploying stacks",
   };
-  logger.info(modeMessages[args.mode] || "Processing stacks");
+  logger.info(
+    modeMessages[args.mode as keyof typeof modeMessages] || "Processing stacks",
+  );
 
   const results = await deployToAllRegions(regions, args, controller.signal);
 
   displayResults(args, results);
 }
 
-function displayHeader(args, regions) {
+function displayHeader(args: ParsedArgs, regions: string[]) {
   console.log(`
 Multi-Region CDK Deployment
 ${Object.entries({
@@ -83,7 +94,7 @@ ${Object.entries({
   .join("\n")}`);
 }
 
-function displayResults(args, results) {
+function displayResults(args: ParsedArgs, results: DeploymentResult[]) {
   const failedRegions = results.filter((r) => !r.success);
 
   if (failedRegions.length > 0) {
@@ -102,7 +113,7 @@ function displayResults(args, results) {
   } else if (args.mode === "execute") {
     const totalDuration = results
       .filter((r) => r.duration)
-      .reduce((sum, r) => sum + parseFloat(r.duration), 0);
+      .reduce((sum, r) => sum + parseFloat(r.duration!), 0);
     logger.success(`All deployments completed in ${totalDuration.toFixed(1)}s`);
   } else {
     logger.success("Differences shown for all regions");

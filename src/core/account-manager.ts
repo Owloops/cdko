@@ -1,18 +1,39 @@
 import { $ } from "zx";
 import { minimatch } from "minimatch";
-import { logger } from "../utils/logger.mjs";
+import { logger } from "../utils/logger.ts";
+
+interface AccountInfo {
+  accountId: string;
+  profile: string;
+  userId: string;
+  arn: string;
+}
+
+interface DeploymentTarget {
+  profile: string;
+  accountId: string;
+  region: string;
+  key: string;
+}
+
+interface FailedAccountInfo {
+  profile: string;
+  error: string;
+  failed: true;
+}
+
+type AccountResult = AccountInfo | FailedAccountInfo;
 
 export class AccountManager {
+  private configPath: string;
+  private accountCache: Map<string, AccountInfo>;
+
   constructor(configPath = ".cdko.json") {
     this.configPath = configPath;
     this.accountCache = new Map();
   }
 
-  /**
-   * Get all available AWS profiles
-   * @returns {Promise<string[]>} Array of available profile names
-   */
-  async getAvailableProfiles() {
+  async getAvailableProfiles(): Promise<string[]> {
     try {
       const result = await $`aws configure list-profiles`.quiet();
       return result.stdout
@@ -25,15 +46,10 @@ export class AccountManager {
     }
   }
 
-  /**
-   * Match profile patterns against available profiles
-   * @param {string} profilePattern - Profile pattern(s) from CLI (e.g., 'dev-*' or 'dev,prod')
-   * @returns {Promise<string[]>} Array of matched profile names
-   */
-  async matchProfiles(profilePattern) {
-    const patterns = profilePattern.split(",").map((p) => p.trim());
+  async matchProfiles(profilePattern: string): Promise<string[]> {
+    const patterns = profilePattern.split(",").map((p: string) => p.trim());
     const availableProfiles = await this.getAvailableProfiles();
-    const matchedProfiles = [];
+    const matchedProfiles: string[] = [];
 
     for (const pattern of patterns) {
       if (availableProfiles.length > 0) {
@@ -59,19 +75,14 @@ export class AccountManager {
     logger.info(
       `Found ${
         matchedProfiles.length
-      } profile(s) matching pattern: ${matchedProfiles.join(", ")}`
+      } profile(s) matching pattern: ${matchedProfiles.join(", ")}`,
     );
     return matchedProfiles;
   }
 
-  /**
-   * Get account information for a single profile
-   * @param {string} profile - AWS profile name
-   * @returns {Promise<Object>} Account info with id, profile, userId, and arn
-   */
-  async getAccountInfo(profile) {
+  async getAccountInfo(profile: string): Promise<AccountInfo> {
     if (this.accountCache.has(profile)) {
-      return this.accountCache.get(profile);
+      return this.accountCache.get(profile)!;
     }
 
     try {
@@ -93,36 +104,42 @@ export class AccountManager {
 
       return accountInfo;
     } catch (error) {
-      const errorMsg = error.stderr || error.message;
+      const errorMsg =
+        error instanceof Error && "stderr" in error
+          ? (error as Error & { stderr: string }).stderr
+          : error instanceof Error
+            ? error.message
+            : String(error);
       logger.error(
-        `Failed to get account info for profile ${profile}: ${errorMsg}`
+        `Failed to get account info for profile ${profile}: ${errorMsg}`,
       );
       throw new Error(
-        `Profile '${profile}' authentication failed: ${errorMsg}`
+        `Profile '${profile}' authentication failed: ${errorMsg}`,
       );
     }
   }
 
-  /**
-   * Get account information for multiple profiles
-   * @param {string[]} profiles - Array of AWS profile names
-   * @returns {Promise<Object[]>} Array of account info objects
-   */
-  async getMultiAccountInfo(profiles) {
+  async getMultiAccountInfo(profiles: string[]): Promise<AccountInfo[]> {
     logger.info(`Discovering accounts for ${profiles.length} profile(s)...`);
 
-    const accountPromises = profiles.map((profile) =>
-      this.getAccountInfo(profile).catch((error) => ({
-        profile,
-        error: error.message,
-        failed: true,
-      }))
+    const accountPromises = profiles.map((profile: string) =>
+      this.getAccountInfo(profile).catch(
+        (error): FailedAccountInfo => ({
+          profile,
+          error: error instanceof Error ? error.message : String(error),
+          failed: true,
+        }),
+      ),
     );
 
-    const results = await Promise.all(accountPromises);
+    const results: AccountResult[] = await Promise.all(accountPromises);
 
-    const successful = results.filter((result) => !result.failed);
-    const failed = results.filter((result) => result.failed);
+    const successful = results.filter(
+      (result): result is AccountInfo => !("failed" in result),
+    );
+    const failed = results.filter(
+      (result): result is FailedAccountInfo => "failed" in result,
+    );
 
     if (failed.length > 0) {
       logger.error(`Failed to authenticate ${failed.length} profile(s):`);
@@ -140,17 +157,14 @@ export class AccountManager {
     return successful;
   }
 
-  /**
-   * Create deployment targets from account info and regions
-   * @param {Object[]} accountInfo - Array of account info objects
-   * @param {string[]} regions - Array of region names
-   * @returns {Object[]} Array of deployment targets with profile, accountId, region, and key
-   */
-  createDeploymentTargets(accountInfo, regions) {
-    const targets = [];
+  createDeploymentTargets(
+    accountInfo: AccountInfo[],
+    regions: string[],
+  ): DeploymentTarget[] {
+    const targets: DeploymentTarget[] = [];
 
     accountInfo.forEach(({ profile, accountId }) => {
-      regions.forEach((region) => {
+      regions.forEach((region: string) => {
         targets.push({
           profile,
           accountId,
@@ -163,9 +177,6 @@ export class AccountManager {
     return targets;
   }
 
-  /**
-   * Clear the account cache
-   */
   clearCache() {
     this.accountCache.clear();
   }

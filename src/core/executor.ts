@@ -1,29 +1,23 @@
 import { $ } from "zx";
+import type { Duration } from "zx";
 
-/**
- * Execute a CDK command with proper configuration and error handling
- * @param {string} region - AWS region for deployment
- * @param {string} stackName - Name of the CDK stack/construct
- * @param {string} command - CDK command to run (deploy, diff, etc.)
- * @param {string} profile - AWS profile to use
- * @param {Object} [options] - Additional options
- * @param {boolean} [options.verbose] - Enable verbose CDK output
- * @param {string[]} [options.parameters] - CDK parameters array
- * @param {boolean} [options.includeDeps] - Include dependency stacks
- * @param {string[]} [options.context] - CDK context values
- * @param {boolean} [options.executeChangeset] - Execute changesets immediately
- * @param {string} [options.cdkOptions] - Additional CDK CLI options
- * @param {AbortSignal} [options.signal] - Abort signal for cancellation
- * @param {string} options.cloudAssemblyPath - Path to cloud assembly (required)
- * @returns {Promise<void>} Resolves when command completes successfully
- * @throws {Error} When CDK command fails or is aborted
- */
+interface CdkCommandOptions {
+  verbose?: boolean;
+  parameters?: string[];
+  includeDeps?: boolean;
+  context?: string[];
+  executeChangeset?: boolean;
+  cdkOptions?: string;
+  signal?: AbortSignal;
+  cloudAssemblyPath?: string | null;
+}
+
 export async function runCdkCommand(
-  region,
-  stackName,
-  command,
-  profile,
-  options = {}
+  region: string,
+  stackName: string,
+  command: string,
+  profile: string,
+  options: CdkCommandOptions = {},
 ) {
   const {
     verbose = false,
@@ -51,7 +45,7 @@ export async function runCdkCommand(
   }
   cdkArgs.push("--app", cloudAssemblyPath);
 
-  context.forEach((ctx) => {
+  context.forEach((ctx: string) => {
     cdkArgs.push("--context", ctx);
   });
 
@@ -69,7 +63,7 @@ export async function runCdkCommand(
     if (!includeDeps) cdkArgs.push("--exclusively");
   }
 
-  parameters.forEach((param) => {
+  parameters.forEach((param: string) => {
     if (includeDeps && !param.includes(":")) {
       cdkArgs.push("--parameters", `${stackName}:${param}`);
     } else {
@@ -78,21 +72,18 @@ export async function runCdkCommand(
   });
 
   if (cdkOptions) {
-    const additionalArgs = cdkOptions.split(/\s+/).filter((arg) => arg);
+    const additionalArgs = cdkOptions.split(/\s+/).filter((arg: string) => arg);
     cdkArgs.push(...additionalArgs);
   }
 
   cdkArgs.push(stackName);
 
+  process.env.AWS_REGION = region;
+
   const timeout = process.env.CDK_TIMEOUT || "30m";
 
   return await $({
-    env: {
-      ...process.env,
-      AWS_REGION: region,
-    },
     signal,
-    timeout,
     quiet: ["diff", "deploy"].includes(command) ? false : !verbose,
-  })`cdk ${cdkArgs}`;
+  })`cdk ${cdkArgs}`.timeout(timeout as Duration);
 }
