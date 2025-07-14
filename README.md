@@ -191,7 +191,6 @@ CDKO automatically generates sensible defaults, but you can customize:
 - `CDK_BUILD_COMMAND` - Override build command (default: "npm run build")
 - `CDK_TIMEOUT` - Timeout for CDK operations (default: "30m")
 - `CDK_CLI_NOTICES` - Set to "true" to show CDK notices (default: hidden)
-- `CDK_DISABLE_VERSION_CHECK` - Disable CDK version check (set for Production)
 
 ### Stack Pattern Matching
 

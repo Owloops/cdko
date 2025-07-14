@@ -7,11 +7,17 @@ import { logger } from "../utils/logger.mjs";
 import { runCdkCommand } from "./executor.mjs";
 import { StackDetector } from "./stack-detector.mjs";
 import { resolveDeployments } from "./stack-matcher.mjs";
+import { CloudAssemblyManager } from "./cloud-assembly.mjs";
 
 /**
  * Deploy a specific stack to a specific region
  */
-export async function deployStack(deployment, args, signal) {
+export async function deployStack(
+  deployment,
+  args,
+  signal,
+  cloudAssemblyPath = null
+) {
   const { region, constructId, stackName } = deployment;
 
   console.log();
@@ -28,6 +34,7 @@ export async function deployStack(deployment, args, signal) {
     const executorOptions = {
       ...args,
       signal,
+      cloudAssemblyPath,
     };
 
     switch (args.mode) {
@@ -107,6 +114,20 @@ export async function deployToAllRegions(regions, args, signal) {
     }
   }
 
+  const cloudAssembly = new CloudAssemblyManager({});
+  let cloudAssemblyPath = null;
+
+  try {
+    cloudAssemblyPath = await cloudAssembly.synthesize({
+      stacks: args.stackPattern,
+      profile: args.profile,
+      environment: args.environment,
+    });
+  } catch (error) {
+    logger.error("Failed to synthesize cloud assembly:", error.message);
+    throw error;
+  }
+
   console.log();
   logger.info(`Planning to deploy ${deployments.length} stack(s):`);
   const stackGroups = {};
@@ -125,7 +146,9 @@ export async function deployToAllRegions(regions, args, signal) {
 
   if (args.sequential) {
     for (const deployment of deployments) {
-      results.push(await deployStack(deployment, args, signal));
+      results.push(
+        await deployStack(deployment, args, signal, cloudAssemblyPath)
+      );
     }
   } else {
     logger.info(
@@ -133,7 +156,7 @@ export async function deployToAllRegions(regions, args, signal) {
     );
 
     const deploymentPromises = deployments.map((deployment) =>
-      deployStack(deployment, args, signal).then(
+      deployStack(deployment, args, signal, cloudAssemblyPath).then(
         (result) => ({ ...result, status: "fulfilled" }),
         (error) => ({
           region: deployment.region,

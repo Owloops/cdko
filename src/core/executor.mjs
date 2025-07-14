@@ -20,16 +20,23 @@ export async function runCdkCommand(
     executeChangeset = false,
     cdkOptions = "",
     signal,
+    cloudAssemblyPath = null,
   } = options;
 
-  const cdkArgs = [command, "--profile", quote(profile), "--no-notices"];
+  const cdkArgs = [command, "--profile", quote(profile)];
+  
+  if (process.env.CDK_CLI_NOTICES !== "true") {
+    cdkArgs.push("--no-notices");
+  }
 
   if (verbose) {
     cdkArgs.push("-v");
   }
 
-  const outputDir = `cdk.out.${region}`;
-  cdkArgs.push("--output", quote(outputDir));
+  if (!cloudAssemblyPath) {
+    throw new Error("Cloud assembly path is required");
+  }
+  cdkArgs.push("--app", quote(cloudAssemblyPath));
 
   context.forEach((ctx) => {
     cdkArgs.push("--context", ctx);
