@@ -3,9 +3,6 @@ import { existsSync, mkdirSync, rmSync } from "fs";
 import { join } from "path";
 import { logger } from "../utils/logger.mjs";
 
-/**
- * Manages cloud assembly synthesis and caching for CDK deployments
- */
 export class CloudAssemblyManager {
   constructor(config) {
     this.config = config;
@@ -26,8 +23,8 @@ export class CloudAssemblyManager {
    * @returns {Promise<string>} Path to cloud assembly
    */
   async synthesize(options = {}) {
-    const { stacks = "*", profile, environment } = options;
-    const cloudAssemblyPath = this.getCloudAssemblyPath();
+    const { stacks = "*", profile, environment, outputDir } = options;
+    const cloudAssemblyPath = outputDir ? join(process.cwd(), outputDir) : this.getCloudAssemblyPath();
 
     try {
       if (existsSync(cloudAssemblyPath)) {

@@ -1,14 +1,9 @@
-/**
- * Library entry point for programmatic use
- * Exports core functionality for use as a module
- */
+export { StackManager } from "./core/stack-manager.mjs";
+export { AccountManager } from "./core/account-manager.mjs";
+export { CloudAssemblyManager } from "./core/cloud-assembly.mjs";
 
-export {
-  loadConfig,
-  getRegions,
-  getBuildCommand,
-} from "./core/config.mjs";
 export { runCdkCommand } from "./core/executor.mjs";
-export { deployToRegion, deployToAllRegions } from "./core/orchestrator.mjs";
+export { deployToAllRegions } from "./core/orchestrator.mjs";
+
 export { logger } from "./utils/logger.mjs";
 export { checkPrerequisites } from "./utils/prerequisites.mjs";

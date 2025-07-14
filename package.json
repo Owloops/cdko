@@ -1,6 +1,6 @@
 {
   "name": "cdko",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "Multi-region AWS CDK deployment tool",
   "type": "module",
   "main": "src/index.mjs",
@@ -9,6 +9,7 @@
   },
   "scripts": {
     "start": "./bin/cdko",
+    "test": "echo \"No tests specified yet\" && exit 0",
     "lint": "eslint src/",
     "lint:fix": "eslint src/ --fix"
   },
@@ -16,12 +17,23 @@
     "aws",
     "cdk",
     "multi-region",
+    "multi-account", 
     "deployment",
     "infrastructure",
-    "devops"
+    "devops",
+    "cli",
+    "orchestrator"
   ],
   "author": "Owloops",
   "license": "MIT",
+  "homepage": "https://github.com/owloops/cdko#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/owloops/cdko.git"
+  },
+  "bugs": {
+    "url": "https://github.com/owloops/cdko/issues"
+  },
   "dependencies": {
     "zx": "^8.6.2",
     "minimatch": "^10.0.3"

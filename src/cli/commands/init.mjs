@@ -1,14 +1,11 @@
 #!/usr/bin/env node
-import { StackDetector } from "../../core/stack-detector.mjs";
+import { StackManager } from "../../core/stack-manager.mjs";
 import { logger } from "../../utils/logger.mjs";
 
-/**
- * Initialize CDKO configuration by detecting CDK stacks
- */
 export async function init() {
   try {
-    const detector = new StackDetector();
-    await detector.detect();
+    const stackManager = new StackManager();
+    await stackManager.detect();
   } catch (error) {
     logger.error(error.message);
     process.exit(1);

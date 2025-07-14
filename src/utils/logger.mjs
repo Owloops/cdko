@@ -1,8 +1,3 @@
-/**
- * Logger utility with colored output using chalk from zx
- * Provides consistent logging across the application
- */
-
 import { chalk } from "zx";
 
 export const logger = {

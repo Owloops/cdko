@@ -1,12 +1,7 @@
-/**
- * Main CLI entry point
- * Orchestrates the multi-region CDK deployment process
- */
-
-import { $, fs, path, spinner } from "zx";
+import { fs, path } from "zx";
 import { logger } from "../utils/logger.mjs";
 import { checkPrerequisites } from "../utils/prerequisites.mjs";
-import { loadConfig, getRegions, getBuildCommand } from "../core/config.mjs";
+import { StackManager } from "../core/stack-manager.mjs";
 import { deployToAllRegions } from "../core/orchestrator.mjs";
 import { parseArgs, validateArgs, printUsage } from "./args.mjs";
 import { init } from "./commands/init.mjs";
@@ -34,12 +29,13 @@ async function main() {
 
   validateArgs(args);
 
-  const config = await loadConfig();
+  const stackManager = new StackManager();
+  const config = await stackManager.loadConfig();
 
   const cdkTimeout = config.cdkTimeout || "30m";
   process.env.CDK_TIMEOUT = cdkTimeout;
 
-  const regions = getRegions(config, args.regions);
+  const regions = stackManager.getRegions(config, args.regions);
 
   displayHeader(args, regions);
 
@@ -51,20 +47,12 @@ async function main() {
   await checkPrerequisites();
 
   const projectRoot = process.cwd();
-  if (!(await fs.exists(path.join(projectRoot, "package.json")))) {
-    logger.error("package.json not found. Are you in the correct directory?");
+  if (!(await fs.exists(path.join(projectRoot, "cdk.json")))) {
+    logger.error("No cdk.json found in current directory:");
+    logger.error(`  ${projectRoot}`);
+    logger.info("Make sure you're in a CDK project directory");
+    logger.info("If this is a new CDK project, run: cdk init");
     process.exit(1);
-  }
-
-  console.log();
-  const buildCommand = getBuildCommand(config);
-  if (!args.dryRun) {
-    await spinner("Building project...", async () => {
-      const [cmd, ...cmdArgs] = buildCommand.split(" ");
-      await $`${cmd} ${cmdArgs}`.quiet();
-    });
-  } else if (args.dryRun) {
-    logger.info(`Would run: ${buildCommand}`);
   }
 
   console.log();
@@ -75,11 +63,7 @@ async function main() {
   };
   logger.info(modeMessages[args.mode] || "Processing stacks");
 
-  const results = await deployToAllRegions(
-    regions,
-    args,
-    controller.signal
-  );
+  const results = await deployToAllRegions(regions, args, controller.signal);
 
   displayResults(args, results);
 }
@@ -126,9 +110,19 @@ function displayResults(args, results) {
 }
 
 main().catch((err) => {
-  logger.error(`Unexpected error: ${err.message}`);
+  console.log();
+  logger.error("CDKO encountered an unexpected error:");
+  logger.error(`  ${err.message}`);
+
   if (process.env.DEBUG) {
+    console.log("\nStack trace:");
     console.error(err);
+  } else {
+    logger.info("Run with DEBUG=1 for detailed error information");
   }
+
+  logger.info("If this issue persists, please report it at:");
+  logger.info("  https://github.com/owloops/cdko/issues");
+
   process.exit(1);
 });

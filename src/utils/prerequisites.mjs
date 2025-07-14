@@ -1,7 +1,3 @@
-/**
- * Check system prerequisites - verifies required CLI tools are installed
- */
-
 import { $ } from "zx";
 import { logger } from "./logger.mjs";
 

@@ -1,8 +1,3 @@
-/**
- * CLI argument parsing and validation
- * Maintains backward compatibility with original multi-region.mjs
- */
-
 import { argv } from "zx";
 import { logger } from "../utils/logger.mjs";
 
@@ -11,7 +6,7 @@ export function parseArgs() {
     _: argv._ || [],
     profile: argv.p || argv.profile || "",
     stackPattern: argv.s || argv.stack || "",
-    regions: argv.r || argv.regions || "all",
+    regions: argv.r || argv.region || "all",
     mode: argv.m || argv.mode || "changeset",
     sequential: argv.x || argv.sequential || false,
     dryRun: argv.d || argv["dry-run"] || false,
@@ -25,13 +20,13 @@ export function parseArgs() {
 
   const paramArray = argv.parameters || [];
   args.parameters = Array.isArray(paramArray) ? paramArray : [paramArray];
-  args.parameters = args.parameters.filter((p) => p);
+  args.parameters = args.parameters.filter((p) => p && typeof p === "string");
 
   const contextArray = argv.context || [];
   args.context = Array.isArray(contextArray) ? contextArray : [contextArray];
-  args.context = args.context.filter((c) => c);
+  args.context = args.context.filter((c) => c && typeof c === "string");
 
-  const cdkOptsIndex = process.argv.findIndex(arg => arg === '--cdk-opts');
+  const cdkOptsIndex = process.argv.findIndex((arg) => arg === "--cdk-opts");
   if (cdkOptsIndex !== -1 && cdkOptsIndex + 1 < process.argv.length) {
     args.cdkOptions = process.argv[cdkOptsIndex + 1];
   }
@@ -40,22 +35,40 @@ export function parseArgs() {
 }
 
 export function validateArgs(args) {
-  if (!args.profile) {
-    logger.error("AWS profile is required");
+  if (!args.profile || args.profile.trim() === "") {
+    logger.error("AWS profile is required. Use -p or --profile to specify.");
     printUsage();
     process.exit(1);
   }
 
-  if (!args.stackPattern) {
-    logger.error("Stack pattern is required");
+  if (!args.stackPattern || args.stackPattern.trim() === "") {
+    logger.error("Stack pattern is required. Use -s or --stack to specify.");
     printUsage();
     process.exit(1);
   }
 
   const validModes = ["diff", "changeset", "execute"];
   if (!validModes.includes(args.mode)) {
-    logger.error(`Mode must be one of: ${validModes.join(", ")}`);
+    logger.error(
+      `Mode must be one of: ${validModes.join(", ")}. Provided: ${args.mode}`
+    );
     process.exit(1);
+  }
+
+  for (const param of args.parameters) {
+    if (!param.includes("=")) {
+      logger.error(
+        `Invalid parameter format: ${param}. Use KEY=VALUE or STACK:KEY=VALUE`
+      );
+      process.exit(1);
+    }
+  }
+
+  for (const ctx of args.context) {
+    if (!ctx.includes("=")) {
+      logger.error(`Invalid context format: ${ctx}. Use KEY=VALUE`);
+      process.exit(1);
+    }
   }
 }
 
@@ -72,8 +85,9 @@ Usage:
 
 Options:
   -p, --profile PROFILE      AWS profile to use (required)
+                             Supports patterns: dev-*, or comma-separated: dev,prod,staging
   -s, --stack PATTERN        Stack name pattern to deploy (required)
-  -r, --regions REGIONS      Comma-separated regions or 'all' (default: from config)
+  -r, --region REGION        Comma-separated regions or 'all' (default: from config)
   -m, --mode MODE           Deployment mode: diff, changeset, execute
                             (default: changeset)
   -x, --sequential          Deploy regions sequentially (default: parallel)
@@ -91,6 +105,8 @@ Examples:
   ${scriptName} init                                                     # Initialize CDKO configuration
   ${scriptName} -p MyProfile -s Production-MyStack                      # Deploy to all regions
   ${scriptName} -p MyProfile -s Production-MyStack -r us-east-1,eu-west-1
+  ${scriptName} -p dev-profile,prod-profile -s MyStack                  # Multi-account deployment
+  ${scriptName} -p "dev-*" -s MyStack                                   # Pattern matching profiles
   ${scriptName} -p MyProfile -s Production-MyStack -m execute
   ${scriptName} -p MyProfile -s Production-MyStack --parameters MinSize=2 --parameters MaxSize=10
   ${scriptName} -p MyProfile -s Production-MyStack --cdk-opts "--force --quiet"

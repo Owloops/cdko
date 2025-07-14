@@ -25,6 +25,7 @@ cdko -p MyProfile -s Production-MyApp
 ## Features
 
 - **Multi-region deployment**: Deploy to multiple AWS regions in parallel or sequentially
+- **Multi-account support**: Deploy across multiple AWS accounts using profile patterns
 - **Smart stack detection**: Automatically discovers and maps your CDK stacks
 - **Cloud assembly caching**: Synthesizes once, deploys many times for optimal performance
 - **Flexible targeting**: Deploy specific stacks using pattern matching or wildcards
@@ -51,6 +52,9 @@ cdko -p MyProfile -s MyStack
 # Deploy to specific regions
 cdko -p MyProfile -s MyStack -r us-east-1,eu-west-1
 
+# Multi-account deployment
+cdko -p "dev-*,prod" -s MyStack
+
 # Preview changes without deploying
 cdko -p MyProfile -s MyStack -m diff
 ```
@@ -59,9 +63,9 @@ cdko -p MyProfile -s MyStack -m diff
 
 | Option | Description | Default |
 |--------|-------------|---------|
-| `-p, --profile` | AWS profile to use | *Required* |
+| `-p, --profile` | AWS profile to use (supports patterns: `dev-*`, comma-separated: `dev,prod`) | *Required* |
 | `-s, --stack` | Stack name pattern to deploy | *Required* |
-| `-r, --regions` | Comma-separated regions or 'all' | `us-east-1` |
+| `-r, --region` | Comma-separated regions or 'all' | `us-east-1` |
 | `-m, --mode` | Deployment mode: `diff`, `changeset`, `execute` | `changeset` |
 | `-x, --sequential` | Deploy regions sequentially instead of parallel | `false` |
 | `-d, --dry-run` | Show what would be deployed without executing | `false` |
@@ -92,7 +96,6 @@ Run `cdko init` to auto-detect your CDK stacks and create a `.cdko.json` configu
       }
     }
   },
-  "buildCommand": "npm run build",
   "cdkTimeout": "30m",
   "suppressNotices": true
 }
@@ -100,7 +103,6 @@ Run `cdko init` to auto-detect your CDK stacks and create a `.cdko.json` configu
 
 ### Environment Variables
 
-- `CDK_BUILD_COMMAND` - Override build command (default: "npm run build")
 - `CDK_TIMEOUT` - Timeout for CDK operations (default: "30m")
 - `CDK_CLI_NOTICES` - Set to "true" to show CDK notices (default: hidden)
 - `DEBUG` - Enable detailed error traces for troubleshooting
@@ -119,6 +121,10 @@ cdko -p MyProfile -s MyApp --context env=production feature-flag=enabled
 
 # Deploy all Production stacks
 cdko -p MyProfile -s "Production-*"
+
+# Multi-account deployments with pattern matching
+cdko -p "dev-*" -s MyApp
+cdko -p "dev-account,prod-account" -s MyApp
 
 # Include dependency stacks
 cdko -p MyProfile -s MyApp --include-deps
@@ -144,14 +150,10 @@ cdko -p MyProfile -s MyApp --cdk-opts "--force --outputs-file outputs.json"
 ## Troubleshooting
 
 - **AWS Authentication**: If credentials expire, run `aws sso login --profile <profile>`
+- **Multi-Account Issues**: Ensure all profiles have valid credentials and required permissions
+- **Profile Patterns**: Use quotes around patterns: `cdko -p "dev-*"` not `cdko -p dev-*`
 - **Graceful Shutdown**: Ctrl+C cancels all pending operations cleanly
 - **Clear Errors**: CDK errors are parsed and displayed with context
-
-## Roadmap
-
-**Multi-Account Support**: Research and implement deployments across multiple AWS accounts using profile chaining or assume role patterns.
-
-**Enhanced CLI Experience**: Improve error messages, add progress indicators, and provide better dry-run previews for complex deployments.
 
 ## Development
 

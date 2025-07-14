@@ -1,10 +1,23 @@
-/**
- * CDK command executor
- * Builds and executes CDK commands with proper configuration
- */
-
 import { $, quote } from "zx";
 
+/**
+ * Execute a CDK command with proper configuration and error handling
+ * @param {string} region - AWS region for deployment
+ * @param {string} stackName - Name of the CDK stack/construct
+ * @param {string} command - CDK command to run (deploy, diff, etc.)
+ * @param {string} profile - AWS profile to use
+ * @param {Object} [options] - Additional options
+ * @param {boolean} [options.verbose] - Enable verbose CDK output
+ * @param {string[]} [options.parameters] - CDK parameters array
+ * @param {boolean} [options.includeDeps] - Include dependency stacks
+ * @param {string[]} [options.context] - CDK context values
+ * @param {boolean} [options.executeChangeset] - Execute changesets immediately
+ * @param {string} [options.cdkOptions] - Additional CDK CLI options
+ * @param {AbortSignal} [options.signal] - Abort signal for cancellation
+ * @param {string} options.cloudAssemblyPath - Path to cloud assembly (required)
+ * @returns {Promise<void>} Resolves when command completes successfully
+ * @throws {Error} When CDK command fails or is aborted
+ */
 export async function runCdkCommand(
   region,
   stackName,
@@ -24,7 +37,7 @@ export async function runCdkCommand(
   } = options;
 
   const cdkArgs = [command, "--profile", quote(profile)];
-  
+
   if (process.env.CDK_CLI_NOTICES !== "true") {
     cdkArgs.push("--no-notices");
   }
