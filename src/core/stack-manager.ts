@@ -1,22 +1,53 @@
 import { $ } from "zx";
 import fs from "fs/promises";
 import { minimatch } from "minimatch";
-import { logger } from "../utils/logger.mjs";
+import { logger } from "../utils/logger.ts";
+
+interface StackDeployment {
+  constructId: string;
+  account: string;
+  region: string;
+}
+
+interface StackGroup {
+  [key: string]: StackDeployment;
+}
+
+export interface CdkoConfig {
+  version: string;
+  stackGroups: { [stackName: string]: StackGroup };
+  cdkTimeout?: string;
+  suppressNotices?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+  updatedBy?: string;
+}
+
+interface MatchedStackGroup {
+  name: string;
+  pattern: string;
+  deployments: StackGroup;
+}
+
+interface FilteredDeployment {
+  region: string;
+  constructId: string;
+  stackName: string;
+}
 
 export class StackManager {
+  private configPath: string;
+
   constructor(configPath = ".cdko.json") {
     this.configPath = configPath;
   }
 
-  /**
-   * Detect CDK stacks and create/update configuration
-   */
   async detect() {
     try {
       await fs.access("cdk.json");
     } catch {
       throw new Error(
-        "No CDK project found. Run this command in a CDK project directory."
+        "No CDK project found. Run this command in a CDK project directory.",
       );
     }
 
@@ -41,10 +72,6 @@ export class StackManager {
     return config;
   }
 
-  /**
-   * Load existing configuration from .cdko.json
-   * @returns {Promise<Object>} Configuration object or empty object if not found
-   */
   async loadConfig() {
     try {
       const data = await fs.readFile(this.configPath, "utf8");
@@ -57,16 +84,17 @@ export class StackManager {
 
       return config;
     } catch (error) {
-      if (error.code !== "ENOENT") {
+      if (
+        error instanceof Error &&
+        "code" in error &&
+        error.code !== "ENOENT"
+      ) {
         logger.warn(`Failed to load ${this.configPath}: ${error.message}`);
       }
     }
     return {};
   }
 
-  /**
-   * Auto-detect CDK stacks using cdk list
-   */
   async detectStacks() {
     logger.info("Detecting CDK stacks...");
 
@@ -76,11 +104,11 @@ export class StackManager {
 
       if (!Array.isArray(stacks) || stacks.length === 0) {
         throw new Error(
-          "No stacks found. Ensure your CDK app synthesizes correctly."
+          "No stacks found. Ensure your CDK app synthesizes correctly.",
         );
       }
 
-      const stackGroups = {};
+      const stackGroups: { [stackName: string]: StackGroup } = {};
 
       for (const stack of stacks) {
         const stackName = stack.name || stack.id;
@@ -115,19 +143,18 @@ export class StackManager {
         updatedBy: `cdko@${await this.getCdkoVersion()}`,
       };
     } catch (error) {
-      if (error.message.includes("No stacks found")) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes("No stacks found")) {
         throw error;
       }
-      logger.error("Stack detection failed:", error.message);
+      logger.error(`Stack detection failed: ${errorMessage}`);
       throw new Error(
-        "Failed to detect stacks. Ensure CDK app synthesizes correctly."
+        "Failed to detect stacks. Ensure CDK app synthesizes correctly.",
       );
     }
   }
 
-  /**
-   * Get CDKO version
-   */
   async getCdkoVersion() {
     try {
       const packagePath = new URL("../../package.json", import.meta.url);
@@ -139,44 +166,32 @@ export class StackManager {
     }
   }
 
-  /**
-   * Save configuration
-   */
-  async saveConfig(config) {
+  async saveConfig(config: CdkoConfig) {
     await fs.writeFile(this.configPath, JSON.stringify(config, null, 2) + "\n");
     logger.info(`Configuration saved to ${this.configPath}`);
   }
 
-  /**
-   * Get regions from config and CLI arguments
-   * @param {Object} config - Configuration object
-   * @param {string} cliRegions - Regions from CLI (comma-separated or "all")
-   * @returns {string[]} Array of region names
-   */
-  getRegions(config, cliRegions) {
+  getRegions(config: CdkoConfig, cliRegions: string): string[] {
     if (cliRegions && cliRegions !== "all") {
-      return cliRegions.split(",").map((r) => r.trim());
+      return cliRegions.split(",").map((r: string) => r.trim());
     }
     return ["us-east-1"];
   }
 
-  /**
-   * Matches stack patterns against available stacks in configuration
-   * @param {string} stackPattern - Stack pattern(s) from CLI (e.g., 'Production-App*' or 'App,Cache')
-   * @param {Object} stackConfig - Stack configuration from .cdko.json
-   * @returns {Array} Array of matched stack groups with their deployment info
-   */
-  matchStacks(stackPattern, stackConfig) {
+  matchStacks(
+    stackPattern: string,
+    stackConfig: CdkoConfig,
+  ): MatchedStackGroup[] {
     if (!stackConfig?.stackGroups) {
       return [];
     }
 
-    const patterns = stackPattern.split(",").map((p) => p.trim());
+    const patterns = stackPattern.split(",").map((p: string) => p.trim());
     const matchedGroups = [];
 
     for (const pattern of patterns) {
       for (const [stackGroupName, deployments] of Object.entries(
-        stackConfig.stackGroups
+        stackConfig.stackGroups,
       )) {
         if (minimatch(stackGroupName, pattern)) {
           matchedGroups.push({
@@ -191,13 +206,10 @@ export class StackManager {
     return matchedGroups;
   }
 
-  /**
-   * Filters deployments based on region constraints
-   * @param {Object} stackGroup - Stack group with deployments
-   * @param {Array} requestedRegions - Regions requested via CLI
-   * @returns {Array} Filtered deployments that can be executed
-   */
-  filterDeployments(stackGroup, requestedRegions) {
+  filterDeployments(
+    stackGroup: MatchedStackGroup,
+    requestedRegions: string[],
+  ): FilteredDeployment[] {
     const filteredDeployments = [];
 
     for (const [, deployment] of Object.entries(stackGroup.deployments)) {
@@ -225,14 +237,11 @@ export class StackManager {
     return filteredDeployments;
   }
 
-  /**
-   * Resolves all deployments for given stack patterns
-   * @param {string} stackPattern - Stack pattern(s) from CLI
-   * @param {Object} stackConfig - Stack configuration from .cdko.json
-   * @param {Array} requestedRegions - Regions requested via CLI
-   * @returns {Array} All deployments to be executed
-   */
-  resolveDeployments(stackPattern, stackConfig, requestedRegions) {
+  resolveDeployments(
+    stackPattern: string,
+    stackConfig: CdkoConfig,
+    requestedRegions: string[],
+  ): FilteredDeployment[] {
     const matchedGroups = this.matchStacks(stackPattern, stackConfig);
 
     if (matchedGroups.length === 0) {
@@ -249,11 +258,11 @@ export class StackManager {
 
       if (deployments.length === 0) {
         logger.warn(
-          `No valid deployments for ${stackGroup.name} in requested regions`
+          `No valid deployments for ${stackGroup.name} in requested regions`,
         );
       } else {
         logger.info(
-          `${stackGroup.name}: ${deployments.length} deployment(s) planned`
+          `${stackGroup.name}: ${deployments.length} deployment(s) planned`,
         );
         allDeployments.push(...deployments);
       }

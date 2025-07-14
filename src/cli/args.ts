@@ -1,7 +1,23 @@
 import { argv } from "zx";
-import { logger } from "../utils/logger.mjs";
+import { logger } from "../utils/logger.ts";
 
-export function parseArgs() {
+export interface ParsedArgs {
+  _: string[];
+  profile: string;
+  stackPattern: string;
+  regions: string;
+  mode: string;
+  sequential: boolean;
+  dryRun: boolean;
+  help: boolean;
+  verbose: boolean;
+  includeDeps: boolean;
+  parameters: string[];
+  context: string[];
+  cdkOptions: string;
+}
+
+export function parseArgs(): ParsedArgs {
   const args = {
     _: argv._ || [],
     profile: argv.p || argv.profile || "",
@@ -18,13 +34,16 @@ export function parseArgs() {
     cdkOptions: argv["cdk-opts"] || "",
   };
 
-  const paramArray = argv.parameters || [];
-  args.parameters = Array.isArray(paramArray) ? paramArray : [paramArray];
-  args.parameters = args.parameters.filter((p) => p && typeof p === "string");
-
-  const contextArray = argv.context || [];
-  args.context = Array.isArray(contextArray) ? contextArray : [contextArray];
-  args.context = args.context.filter((c) => c && typeof c === "string");
+  args.parameters = Array.isArray(argv.parameters)
+    ? argv.parameters
+    : argv.parameters
+      ? [argv.parameters]
+      : [];
+  args.context = Array.isArray(argv.context)
+    ? argv.context
+    : argv.context
+      ? [argv.context]
+      : [];
 
   const cdkOptsIndex = process.argv.findIndex((arg) => arg === "--cdk-opts");
   if (cdkOptsIndex !== -1 && cdkOptsIndex + 1 < process.argv.length) {
@@ -34,7 +53,7 @@ export function parseArgs() {
   return args;
 }
 
-export function validateArgs(args) {
+export function validateArgs(args: ParsedArgs) {
   if (!args.profile || args.profile.trim() === "") {
     logger.error("AWS profile is required. Use -p or --profile to specify.");
     printUsage();
@@ -50,7 +69,7 @@ export function validateArgs(args) {
   const validModes = ["diff", "changeset", "execute"];
   if (!validModes.includes(args.mode)) {
     logger.error(
-      `Mode must be one of: ${validModes.join(", ")}. Provided: ${args.mode}`
+      `Mode must be one of: ${validModes.join(", ")}. Provided: ${args.mode}`,
     );
     process.exit(1);
   }
@@ -58,7 +77,7 @@ export function validateArgs(args) {
   for (const param of args.parameters) {
     if (!param.includes("=")) {
       logger.error(
-        `Invalid parameter format: ${param}. Use KEY=VALUE or STACK:KEY=VALUE`
+        `Invalid parameter format: ${param}. Use KEY=VALUE or STACK:KEY=VALUE`,
       );
       process.exit(1);
     }

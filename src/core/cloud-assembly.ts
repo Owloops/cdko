@@ -1,30 +1,31 @@
 import { $ } from "zx";
 import { existsSync, mkdirSync, rmSync } from "fs";
 import { join } from "path";
-import { logger } from "../utils/logger.mjs";
+import { logger } from "../utils/logger.ts";
+
+interface SynthesizeOptions {
+  stacks?: string;
+  profile?: string;
+  environment?: string;
+  outputDir?: string;
+}
 
 export class CloudAssemblyManager {
-  constructor(config) {
-    this.config = config;
+  private cloudAssemblyPath: string | null;
+
+  constructor() {
     this.cloudAssemblyPath = null;
   }
 
-  /**
-   * Get the cloud assembly output path
-   * @returns {string} The cloud assembly directory path
-   */
-  getCloudAssemblyPath() {
+  getCloudAssemblyPath(): string {
     return join(process.cwd(), "cdk.out");
   }
 
-  /**
-   * Synthesize the CDK app once and cache the cloud assembly
-   * @param {Object} options - Synthesis options
-   * @returns {Promise<string>} Path to cloud assembly
-   */
-  async synthesize(options = {}) {
+  async synthesize(options: SynthesizeOptions = {}): Promise<string> {
     const { stacks = "*", profile, environment, outputDir } = options;
-    const cloudAssemblyPath = outputDir ? join(process.cwd(), outputDir) : this.getCloudAssemblyPath();
+    const cloudAssemblyPath = outputDir
+      ? join(process.cwd(), outputDir)
+      : this.getCloudAssemblyPath();
 
     try {
       if (existsSync(cloudAssemblyPath)) {
@@ -67,19 +68,14 @@ export class CloudAssemblyManager {
       }
     } catch (error) {
       logger.error("Failed to synthesize cloud assembly");
-      if (error.stderr) {
-        console.error(error.stderr);
+      if (error instanceof Error && "stderr" in error) {
+        console.error((error as Error & { stderr: string }).stderr);
       }
       throw error;
     }
   }
 
-  /**
-   * Get CDK command arguments with cloud assembly
-   * @param {Array} baseArgs - Base CDK arguments
-   * @returns {Array} Modified arguments with cloud assembly path
-   */
-  getCdkArgs(baseArgs) {
+  getCdkArgs(baseArgs: string[]): string[] {
     if (!this.cloudAssemblyPath || !existsSync(this.cloudAssemblyPath)) {
       throw new Error("Cloud assembly not available. Run synthesize() first.");
     }
@@ -96,11 +92,7 @@ export class CloudAssemblyManager {
     return args;
   }
 
-  /**
-   * Check if cloud assembly is available and valid
-   * @returns {boolean} True if cloud assembly is available
-   */
-  isAvailable() {
-    return this.cloudAssemblyPath && existsSync(this.cloudAssemblyPath);
+  isAvailable(): boolean {
+    return !!this.cloudAssemblyPath && existsSync(this.cloudAssemblyPath);
   }
 }
