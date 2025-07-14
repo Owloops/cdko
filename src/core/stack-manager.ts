@@ -1,7 +1,7 @@
 import { $ } from "zx";
 import fs from "fs/promises";
 import { minimatch } from "minimatch";
-import { logger } from "../utils/logger.ts";
+import { logger } from "../utils/logger";
 
 interface StackDeployment {
   constructId: string;

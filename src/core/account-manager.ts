@@ -1,6 +1,6 @@
 import { $ } from "zx";
 import { minimatch } from "minimatch";
-import { logger } from "../utils/logger.ts";
+import { logger } from "../utils/logger";
 
 interface AccountInfo {
   accountId: string;

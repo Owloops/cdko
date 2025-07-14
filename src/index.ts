@@ -1,9 +1,9 @@
-export { StackManager } from "./core/stack-manager.ts";
-export { AccountManager } from "./core/account-manager.ts";
-export { CloudAssemblyManager } from "./core/cloud-assembly.ts";
+export { StackManager } from "./core/stack-manager";
+export { AccountManager } from "./core/account-manager";
+export { CloudAssemblyManager } from "./core/cloud-assembly";
 
-export { runCdkCommand } from "./core/executor.ts";
-export { deployToAllRegions } from "./core/orchestrator.ts";
+export { runCdkCommand } from "./core/executor";
+export { deployToAllRegions } from "./core/orchestrator";
 
-export { logger } from "./utils/logger.ts";
-export { checkPrerequisites } from "./utils/prerequisites.ts";
+export { logger } from "./utils/logger";
+export { checkPrerequisites } from "./utils/prerequisites";

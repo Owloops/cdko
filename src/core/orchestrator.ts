@@ -1,9 +1,9 @@
-import { logger } from "../utils/logger.ts";
-import { runCdkCommand } from "./executor.ts";
-import { StackManager } from "./stack-manager.ts";
-import type { CdkoConfig } from "./stack-manager.ts";
-import { AccountManager } from "./account-manager.ts";
-import { CloudAssemblyManager } from "./cloud-assembly.ts";
+import { logger } from "../utils/logger";
+import { runCdkCommand } from "./executor";
+import { StackManager } from "./stack-manager";
+import type { CdkoConfig } from "./stack-manager";
+import { AccountManager } from "./account-manager";
+import { CloudAssemblyManager } from "./cloud-assembly";
 
 interface Deployment {
   region: string;

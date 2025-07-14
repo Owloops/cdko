@@ -1,5 +1,5 @@
-import { StackManager } from "../../core/stack-manager.ts";
-import { logger } from "../../utils/logger.ts";
+import { StackManager } from "../../core/stack-manager";
+import { logger } from "../../utils/logger";
 
 export async function init() {
   try {
