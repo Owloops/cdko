@@ -59,6 +59,14 @@ export async function runCdkCommand(
     if (!includeDeps) cdkArgs.push("--exclusively");
     if (!executeChangeset) cdkArgs.push("--no-execute");
     cdkArgs.push("--require-approval=never");
+
+    if (executeChangeset) {
+      cdkArgs.push("--progress", "events");
+    }
+  }
+
+  if (command === "diff") {
+    if (!includeDeps) cdkArgs.push("--exclusively");
   }
 
   parameters.forEach((param) => {
@@ -85,6 +93,6 @@ export async function runCdkCommand(
     },
     signal,
     timeout,
-    quiet: ["diff"].includes(command) ? false : !verbose,
+    quiet: ["diff", "deploy"].includes(command) ? false : !verbose,
   })`cdk ${cdkArgs}`;
 }

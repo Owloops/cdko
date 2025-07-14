@@ -163,7 +163,7 @@ export async function deployToAllRegions(regions, args, signal) {
       `Synthesizing cloud assemblies for ${uniqueProfiles.length} profile(s)...`
     );
 
-    for (const profile of uniqueProfiles) {
+    const synthesisPromises = uniqueProfiles.map(async (profile) => {
       try {
         const cloudAssembly = new CloudAssemblyManager({});
         const assemblyPath = await cloudAssembly.synthesize({
@@ -176,12 +176,20 @@ export async function deployToAllRegions(regions, args, signal) {
         logger.success(
           `Cloud assembly for profile ${profile} → ${assemblyPath}`
         );
+        return { profile, assemblyPath, success: true };
       } catch (error) {
         logger.error(
           `Failed to synthesize for profile ${profile}: ${error.message}`
         );
-        throw error;
+        return { profile, error, success: false };
       }
+    });
+
+    const synthesisResults = await Promise.all(synthesisPromises);
+    const failedSynthesis = synthesisResults.filter(result => !result.success);
+    
+    if (failedSynthesis.length > 0) {
+      throw new Error(`Failed to synthesize ${failedSynthesis.length} profile(s): ${failedSynthesis.map(f => f.profile).join(', ')}`);
     }
   } else {
     try {

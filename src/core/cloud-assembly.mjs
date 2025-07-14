@@ -56,7 +56,7 @@ export class CloudAssemblyManager {
         cdkArgs.push("--context", `environment=${environment}`);
       }
 
-      const result = await $`cdk ${cdkArgs}`;
+      const result = await $({ quiet: true })`cdk ${cdkArgs}`;
 
       if (result.exitCode === 0) {
         logger.success(`Cloud assembly synthesized to ${cloudAssemblyPath}`);
