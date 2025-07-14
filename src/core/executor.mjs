@@ -1,4 +1,4 @@
-import { $, quote } from "zx";
+import { $ } from "zx";
 
 /**
  * Execute a CDK command with proper configuration and error handling
@@ -36,7 +36,7 @@ export async function runCdkCommand(
     cloudAssemblyPath = null,
   } = options;
 
-  const cdkArgs = [command, "--profile", quote(profile)];
+  const cdkArgs = [command, "--profile", profile];
 
   if (process.env.CDK_CLI_NOTICES !== "true") {
     cdkArgs.push("--no-notices");
@@ -49,7 +49,7 @@ export async function runCdkCommand(
   if (!cloudAssemblyPath) {
     throw new Error("Cloud assembly path is required");
   }
-  cdkArgs.push("--app", quote(cloudAssemblyPath));
+  cdkArgs.push("--app", cloudAssemblyPath);
 
   context.forEach((ctx) => {
     cdkArgs.push("--context", ctx);
@@ -82,7 +82,7 @@ export async function runCdkCommand(
     cdkArgs.push(...additionalArgs);
   }
 
-  cdkArgs.push(quote(stackName));
+  cdkArgs.push(stackName);
 
   const timeout = process.env.CDK_TIMEOUT || "30m";
 
