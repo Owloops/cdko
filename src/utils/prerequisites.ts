@@ -1,5 +1,5 @@
 import { $ } from "zx";
-import { logger } from "./logger.ts";
+import { logger } from "./logger";
 
 export async function checkPrerequisites() {
   const requiredTools = ["aws", "cdk"];

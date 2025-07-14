@@ -1,5 +1,5 @@
 import { argv } from "zx";
-import { logger } from "../utils/logger.ts";
+import { logger } from "../utils/logger";
 
 export interface ParsedArgs {
   _: string[];

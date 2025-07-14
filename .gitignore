@@ -10,6 +10,9 @@ npm-debug.log*
 .env.*
 !.env.example
 
+# Build output
+dist/
+
 # CDK output directories
 cdk.out/
 cdk.out.*/

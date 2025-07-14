@@ -1,11 +1,11 @@
 import { fs, path } from "zx";
-import { logger } from "../utils/logger.ts";
-import { checkPrerequisites } from "../utils/prerequisites.ts";
-import { StackManager } from "../core/stack-manager.ts";
-import { deployToAllRegions } from "../core/orchestrator.ts";
-import { parseArgs, validateArgs, printUsage } from "./args.ts";
-import type { ParsedArgs } from "./args.ts";
-import { init } from "./commands/init.ts";
+import { logger } from "../utils/logger";
+import { checkPrerequisites } from "../utils/prerequisites";
+import { StackManager } from "../core/stack-manager";
+import { deployToAllRegions } from "../core/orchestrator";
+import { parseArgs, validateArgs, printUsage } from "./args";
+import type { ParsedArgs } from "./args";
+import { init } from "./commands/init";
 
 interface DeploymentResult {
   success: boolean;

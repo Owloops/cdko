@@ -1,7 +1,7 @@
 import { $ } from "zx";
 import { existsSync, mkdirSync, rmSync } from "fs";
 import { join } from "path";
-import { logger } from "../utils/logger.ts";
+import { logger } from "../utils/logger";
 
 interface SynthesizeOptions {
   stacks?: string;
