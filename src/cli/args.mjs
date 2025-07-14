@@ -75,9 +75,9 @@ export function validateArgs(args) {
 export function printUsage() {
   const scriptName = "cdko";
   console.log(`
-Multi-Region CDK Deployment Tool
+Multi-Account & Multi-Region CDK Orchestrator
 
-Deploy CDK stacks across multiple AWS regions with enhanced control.
+Deploy CDK stacks across multiple AWS accounts and regions with enhanced control.
 
 Usage: 
   ${scriptName} init                   Initialize CDKO configuration
@@ -102,28 +102,11 @@ Options:
   -h, --help               Show this help message
 
 Examples:
-  ${scriptName} init                                                     # Initialize CDKO configuration
-  ${scriptName} -p MyProfile -s Production-MyStack                      # Deploy to all regions
-  ${scriptName} -p MyProfile -s Production-MyStack -r us-east-1,eu-west-1
-  ${scriptName} -p dev-profile,prod-profile -s MyStack                  # Multi-account deployment
-  ${scriptName} -p "dev-*" -s MyStack                                   # Pattern matching profiles
-  ${scriptName} -p MyProfile -s Production-MyStack -m execute
-  ${scriptName} -p MyProfile -s Production-MyStack --parameters MinSize=2 --parameters MaxSize=10
-  ${scriptName} -p MyProfile -s Production-MyStack --cdk-opts "--force --quiet"
+  ${scriptName} init                                        # Initialize configuration
+  ${scriptName} -p "dev,prod" -s MyStack                   # Multi-account deployment  
+  ${scriptName} -p MyProfile -s MyStack -r us-east-1,eu-west-1  # Multi-region
+  ${scriptName} -p MyProfile -s "Production-*" -m diff     # Preview changes
 
-Stack Pattern Matching:
-  Use wildcards (*) to match multiple stacks:
-  ${scriptName} -p MyProfile -s "Production-App*"        # Matches Production-App, Production-App-Web, etc.
-  ${scriptName} -p MyProfile -s "Production-*"          # Matches all Production stacks
-  ${scriptName} -p MyProfile -s "*"                     # Matches all stacks
-  ${scriptName} -p MyProfile -s "Production-App,Staging-Cache"  # Multiple patterns
-
-Configuration:
-  Run '${scriptName} init' to auto-detect your CDK stacks and create/update .cdko.json
-  
-  CDKO uses stack detection to map your CDK construct IDs to deployments:
-  - Automatically handles region-specific construct names
-  - Supports environment-agnostic and region-specific stacks
-  - Falls back to traditional naming if no configuration exists
+Run '${scriptName} init' to auto-detect CDK stacks and create .cdko.json configuration.
 `);
 }

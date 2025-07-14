@@ -1,36 +1,42 @@
-# CDKO - Multi-Region CDK Orchestrator
+# CDKO - Multi-Account & Multi-Region CDK Orchestrator
 
-CDKO eliminates the pain of deploying AWS CDK infrastructure across multiple regions. Instead of running `cdk deploy` manually for each region, CDKO orchestrates deployments efficiently while maintaining full CDK compatibility.
+CDKO eliminates the pain of deploying AWS CDK infrastructure across multiple accounts and regions. Instead of running `cdk deploy` manually for each account-region combination, CDKO orchestrates deployments efficiently while maintaining full CDK compatibility.
 
 ## Why CDKO?
 
-DevOps engineers often need to deploy the same infrastructure across multiple regions for redundancy, compliance, or performance. This typically means running multiple CDK commands manually:
+Deploying the same infrastructure across multiple accounts and regions creates exponential complexity:
 
 ```bash
-# The old way - tedious and error-prone
-AWS_REGION=us-east-1 cdk deploy Production-MyApp
-AWS_REGION=eu-west-1 cdk deploy Production-MyApp-EU  
-AWS_REGION=ap-southeast-1 cdk deploy Production-MyApp-APAC
+# Manual way - 6 commands for 3 accounts × 2 regions
+AWS_PROFILE=dev AWS_REGION=us-east-1 cdk deploy Development-MyApp
+AWS_PROFILE=dev AWS_REGION=eu-west-1 cdk deploy Development-MyApp-EU
+# ... 4 more commands
+
+# CDKO way - one command
+cdko -p "dev,staging,prod" -s "*MyApp" -r "us-east-1,eu-west-1"
 ```
 
-CDKO simplifies this to a single command:
-
-```bash
-# The CDKO way - simple and reliable
-cdko -p MyProfile -s Production-MyApp
-```
-
-**Built for local infrastructure deployments** where engineers need quick, reliable multi-region deployments during development and maintenance cycles.
+**Built for local infrastructure deployments** where engineers need quick, reliable multi-account and multi-region deployments during development and maintenance cycles.
 
 ## Features
 
-- **Multi-region deployment**: Deploy to multiple AWS regions in parallel or sequentially
-- **Multi-account support**: Deploy across multiple AWS accounts using profile patterns
-- **Smart stack detection**: Automatically discovers and maps your CDK stacks
-- **Cloud assembly caching**: Synthesizes once, deploys many times for optimal performance
-- **Flexible targeting**: Deploy specific stacks using pattern matching or wildcards
+- **Multi-account & multi-region deployment**: Deploy across account-region matrices in parallel or sequentially
+- **Smart stack detection**: Automatically discovers and maps CDK stack construct IDs to accounts/regions  
+- **Profile pattern matching**: Support for wildcards (`dev-*`) and comma-separated lists (`dev,staging,prod`)
+- **Cloud assembly caching**: Synthesizes once per profile, deploys many times for optimal performance
+- **Flexible stack targeting**: Deploy specific stacks using pattern matching or wildcards
 - **Multiple deployment modes**: Support for diff, changeset, and execute operations
 - **Safe defaults**: Creates changesets for review before execution
+
+## Stack Mapping
+
+CDK creates different **construct IDs** for the same logical stack across environments, while **stack names** can remain the same:
+
+- Construct ID: `Development-MyApp` → Stack name: `MyApp` (dev account)
+- Construct ID: `Production-MyApp` → Stack name: `MyApp` (prod account)  
+- Construct ID: `MyApp-EU` → Stack name: `MyApp` (EU region)
+
+CDKO's `.cdko.json` automatically maps your patterns (`*MyApp`) to the correct construct IDs per account/region.
 
 ## Installation
 
@@ -43,19 +49,13 @@ npm install -g cdko
 ## Quick Start
 
 ```bash
-# Initialize CDKO configuration
+# Initialize configuration
 cdko init
 
-# Deploy a stack to all configured regions
-cdko -p MyProfile -s MyStack
+# Deploy stack across accounts and regions
+cdko -p "dev,prod" -s MyStack -r us-east-1,eu-west-1
 
-# Deploy to specific regions
-cdko -p MyProfile -s MyStack -r us-east-1,eu-west-1
-
-# Multi-account deployment
-cdko -p "dev-*,prod" -s MyStack
-
-# Preview changes without deploying
+# Preview changes
 cdko -p MyProfile -s MyStack -m diff
 ```
 
@@ -110,42 +110,27 @@ Run `cdko init` to auto-detect your CDK stacks and create a `.cdko.json` configu
 ## Examples
 
 ```bash
-# Deploy with parameters
-cdko -p MyProfile -s MyApp --parameters KeyName=my-key InstanceType=t3.micro
+# Multi-account + multi-region
+cdko -p "dev,staging,prod" -s MyApp -r us-east-1,eu-west-1
 
-# Deploy with stack-specific parameters
-cdko -p MyProfile -s MyApp --parameters MyApp:KeyName=my-key
+# Pattern matching
+cdko -p "dev-*" -s "Production-*"
 
-# Deploy with context values
-cdko -p MyProfile -s MyApp --context env=production feature-flag=enabled
+# With parameters
+cdko -p MyProfile -s MyApp --parameters KeyName=my-key
 
-# Deploy all Production stacks
-cdko -p MyProfile -s "Production-*"
-
-# Multi-account deployments with pattern matching
-cdko -p "dev-*" -s MyApp
-cdko -p "dev-account,prod-account" -s MyApp
-
-# Include dependency stacks
-cdko -p MyProfile -s MyApp --include-deps
-
-# Debug mode for troubleshooting
-DEBUG=1 cdko -p MyProfile -s MyApp
-
-# Sequential deployment with verbose output
-cdko -p MyProfile -s MyApp -x -v
-
-# Pass CDK options directly
-cdko -p MyProfile -s MyApp --cdk-opts "--force --outputs-file outputs.json"
+# Execute mode (skip changeset review)
+cdko -p MyProfile -s MyApp -m execute
 ```
 
 ## How It Works
 
-1. **Auto-detection**: Discovers CDK stacks using `cdko init`
-2. **Authentication**: Validates AWS profile credentials with SSO support
-3. **Cloud assembly**: Synthesizes once for optimal performance
-4. **Deployment**: Executes across regions in parallel (or sequentially with `-x`)
-5. **Smart mapping**: Uses region-specific construct IDs when configured
+1. **Auto-detection**: Discovers CDK stacks and their account/region mappings using `cdko init`
+2. **Profile matching**: Resolves profile patterns to actual AWS profiles
+3. **Authentication**: Validates credentials for each profile with SSO support
+4. **Cloud assembly**: Synthesizes once per profile for optimal performance
+5. **Deployment matrix**: Executes across all account-region combinations in parallel (or sequentially with `-x`)
+6. **Smart mapping**: Maps stack patterns to specific construct IDs per account/region
 
 ## Troubleshooting
 
