@@ -30,13 +30,13 @@
   ],
   "author": "Owloops",
   "license": "MIT",
-  "homepage": "https://github.com/owloops/cdko#readme",
+  "homepage": "https://github.com/Owloops/cdko#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/owloops/cdko.git"
+    "url": "git+https://github.com/Owloops/cdko.git"
   },
   "bugs": {
-    "url": "https://github.com/owloops/cdko/issues"
+    "url": "https://github.com/Owloops/cdko/issues"
   },
   "dependencies": {
     "minimatch": "^10.0.3",
