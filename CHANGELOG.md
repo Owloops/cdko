@@ -1,3 +1,11 @@
+## [1.0.4](https://github.com/Owloops/cdko/compare/v1.0.3...v1.0.4) (2025-07-15)
+
+
+### Bug Fixes
+
+* add build environment variables to semantic-release step ([f8891b8](https://github.com/Owloops/cdko/commit/f8891b8c3f929c99f654663e3e9c7e36263005df))
+* push latest package lock file ([aa6c625](https://github.com/Owloops/cdko/commit/aa6c62557b50fbe542da11533b520d52d7ab9a1b))
+
 ## [1.0.3](https://github.com/Owloops/cdko/compare/v1.0.2...v1.0.3) (2025-07-15)
 
 
