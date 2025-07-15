@@ -172,10 +172,21 @@ export class StackManager {
   }
 
   getRegions(config: CdkoConfig, cliRegions: string): string[] {
-    if (cliRegions && cliRegions !== "all") {
-      return cliRegions.split(",").map((r: string) => r.trim());
+    if (cliRegions === "all") {
+      if (config?.stackGroups) {
+        const allRegions = Object.values(config.stackGroups).flatMap((group) =>
+          Object.values(group).map((deployment) => deployment.region),
+        );
+        const uniqueRegions = [...new Set(allRegions)];
+
+        if (uniqueRegions.length > 0) {
+          return uniqueRegions;
+        }
+      }
+      return ["us-east-1"];
     }
-    return ["us-east-1"];
+
+    return cliRegions.split(",").map((r: string) => r.trim());
   }
 
   matchStacks(

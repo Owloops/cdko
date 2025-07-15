@@ -23,7 +23,7 @@ export function parseArgs(): ParsedArgs {
     _: argv._ || [],
     profile: argv.p || argv.profile || "",
     stackPattern: argv.s || argv.stack || "",
-    regions: argv.r || argv.region || "all",
+    regions: argv.r || argv.region || "us-east-1",
     mode: argv.m || argv.mode || "changeset",
     sequential: argv.x || argv.sequential || false,
     dryRun: argv.d || argv["dry-run"] || false,

@@ -31,9 +31,23 @@ async function getVersion(): Promise<string> {
     const __dirname = dirname(__filename);
     const packagePath = join(__dirname, "..", "..", "package.json");
     const packageJson = JSON.parse(await fs.readFile(packagePath, "utf-8"));
-    return packageJson.version || "unknown";
-  } catch (error) {
-    return "unknown";
+
+    const version = packageJson.version || "unknown";
+    const buildInfo = [];
+
+    if (process.env.GITHUB_SHA) {
+      buildInfo.push(`commit: ${process.env.GITHUB_SHA.substring(0, 7)}`);
+    }
+
+    if (process.env.BUILD_DATE) {
+      buildInfo.push(`built: ${process.env.BUILD_DATE}`);
+    }
+
+    const buildString =
+      buildInfo.length > 0 ? ` (${buildInfo.join(", ")})` : "";
+    return `cdko version ${version}${buildString}`;
+  } catch {
+    return "cdko version unknown";
   }
 }
 

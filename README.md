@@ -1,42 +1,16 @@
 # CDKO - Multi-Account & Multi-Region CDK Orchestrator
 
-CDKO eliminates the pain of deploying AWS CDK infrastructure across multiple accounts and regions. Instead of running `cdk deploy` manually for each account-region combination, CDKO orchestrates deployments efficiently while maintaining full CDK compatibility.
-
-## Why CDKO?
-
-Deploying the same infrastructure across multiple accounts and regions creates exponential complexity:
-
-```bash
-# Manual way - 6 commands for 3 accounts × 2 regions
-AWS_PROFILE=dev AWS_REGION=us-east-1 cdk deploy Development-MyApp
-AWS_PROFILE=dev AWS_REGION=eu-west-1 cdk deploy Development-MyApp-EU
-# ... 4 more commands
-
-# CDKO way - one command
-cdko -p "dev,staging,prod" -s "*MyApp" -r "us-east-1,eu-west-1"
-```
-
-**Built for local infrastructure deployments** where engineers need quick, reliable multi-account and multi-region deployments during development and maintenance cycles.
+CDKO eliminates the pain of deploying AWS CDK infrastructure across multiple accounts and regions. Deploy once, everywhere - with full CDK compatibility and intelligent stack mapping.
 
 ## Features
 
-- **Multi-account & multi-region deployment**: Deploy across account-region matrices in parallel or sequentially
-- **Smart stack detection**: Automatically discovers and maps CDK stack construct IDs to accounts/regions  
-- **Profile pattern matching**: Support for wildcards (`dev-*`) and comma-separated lists (`dev,staging,prod`)
-- **Cloud assembly caching**: Synthesizes once per profile, deploys many times for optimal performance
-- **Flexible stack targeting**: Deploy specific stacks using pattern matching or wildcards
-- **Multiple deployment modes**: Support for diff, changeset, and execute operations
-- **Safe defaults**: Creates changesets for review before execution
-
-## Stack Mapping
-
-CDK creates different **construct IDs** for the same logical stack across environments, while **stack names** can remain the same:
-
-- Construct ID: `Development-MyApp` → Stack name: `MyApp` (dev account)
-- Construct ID: `Production-MyApp` → Stack name: `MyApp` (prod account)  
-- Construct ID: `MyApp-EU` → Stack name: `MyApp` (EU region)
-
-CDKO's `.cdko.json` automatically maps your patterns (`*MyApp`) to the correct construct IDs per account/region.
+- **Multi-account & multi-region deployment** - Deploy across account-region matrices in parallel or sequentially
+- **Smart stack detection** - Automatically discovers and maps CDK stack construct IDs to accounts/regions  
+- **Profile pattern matching** - Support for wildcards (`dev-*`) and comma-separated lists (`dev,staging,prod`)
+- **Cloud assembly caching** - Synthesizes once per profile, deploys many times for optimal performance
+- **Flexible stack targeting** - Deploy specific stacks using pattern matching or wildcards
+- **Multiple deployment modes** - Support for diff, changeset, and execute operations
+- **Safe defaults** - Creates changesets for review before execution
 
 ## Installation
 
@@ -74,6 +48,24 @@ cdko -p MyProfile -s MyStack -m diff
 | `--parameters` | CDK parameters (KEY=VALUE or STACK:KEY=VALUE) | - |
 | `--context` | CDK context values (KEY=VALUE) | - |
 | `--cdk-opts` | Pass options directly to CDK commands | - |
+| `-h, --help` | Show help message | - |
+| `--version` | Show version number | - |
+
+## Examples
+
+```bash
+# Multi-account + multi-region
+cdko -p "dev,staging,prod" -s MyApp -r us-east-1,eu-west-1
+
+# Pattern matching
+cdko -p "dev-*" -s "Production-*"
+
+# With parameters
+cdko -p MyProfile -s MyApp --parameters KeyName=my-key
+
+# Execute mode (skip changeset review)
+cdko -p MyProfile -s MyApp -m execute
+```
 
 ## Configuration
 
@@ -101,36 +93,21 @@ Run `cdko init` to auto-detect your CDK stacks and create a `.cdko.json` configu
 }
 ```
 
-### Environment Variables
+### Stack Mapping
+
+CDK creates different **construct IDs** for the same logical stack across environments:
+
+- Construct ID: `Development-MyApp` → Stack name: `MyApp` (dev account)
+- Construct ID: `Production-MyApp` → Stack name: `MyApp` (prod account)  
+- Construct ID: `MyApp-EU` → Stack name: `MyApp` (EU region)
+
+CDKO's `.cdko.json` automatically maps your patterns (`*MyApp`) to the correct construct IDs per account/region.
+
+## Environment Variables
 
 - `CDK_TIMEOUT` - Timeout for CDK operations (default: "30m")
 - `CDK_CLI_NOTICES` - Set to "true" to show CDK notices (default: hidden)
 - `DEBUG` - Enable detailed error traces for troubleshooting
-
-## Examples
-
-```bash
-# Multi-account + multi-region
-cdko -p "dev,staging,prod" -s MyApp -r us-east-1,eu-west-1
-
-# Pattern matching
-cdko -p "dev-*" -s "Production-*"
-
-# With parameters
-cdko -p MyProfile -s MyApp --parameters KeyName=my-key
-
-# Execute mode (skip changeset review)
-cdko -p MyProfile -s MyApp -m execute
-```
-
-## How It Works
-
-1. **Auto-detection**: Discovers CDK stacks and their account/region mappings using `cdko init`
-2. **Profile matching**: Resolves profile patterns to actual AWS profiles
-3. **Authentication**: Validates credentials for each profile with SSO support
-4. **Cloud assembly**: Synthesizes once per profile for optimal performance
-5. **Deployment matrix**: Executes across all account-region combinations in parallel (or sequentially with `-x`)
-6. **Smart mapping**: Maps stack patterns to specific construct IDs per account/region
 
 ## Troubleshooting
 
@@ -143,7 +120,7 @@ cdko -p MyProfile -s MyApp -m execute
 ## Development
 
 ```bash
-git clone https://github.com/yourusername/cdko.git
+git clone https://github.com/Owloops/cdko.git
 cd cdko
 npm install
 npm run build
@@ -167,7 +144,7 @@ CDKO includes comprehensive integration tests that verify core functionality aga
 
 The `test/` directory contains a complete CDK project used as a test fixture:
 
-```
+```text
 test/
 ├── test/                    # Jest tests
 │   ├── cdko-integration.test.ts  # CDKO CLI integration tests
@@ -191,15 +168,18 @@ test/
 # Run all tests
 npm test
 
-# Run only integration tests
+# Run only cdko integration tests
 cd test && npm test -- --testNamePattern="CDKO"
-
-# Run with coverage
-cd test && npm test -- --coverage
 ```
 
 All tests use the `--dry-run` flag to prevent actual AWS deployments, making them safe to run in any environment.
 
+## Acknowledgments
+
+- [zx](https://github.com/google/zx) - Shell scripting for Node.js
+- [minimatch](https://github.com/isaacs/minimatch) - Glob pattern matching
+- [aws-cdk](https://github.com/aws/aws-cdk) - AWS Cloud Development Kit
+
 ## License
 
-MIT - Built with [zx](https://github.com/google/zx)
+This project is licensed under the [MIT License](LICENSE).
