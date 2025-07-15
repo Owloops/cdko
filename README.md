@@ -44,7 +44,7 @@ CDKO's `.cdko.json` automatically maps your patterns (`*MyApp`) to the correct c
 npm install -g cdko
 ```
 
-**Prerequisites**: Bun 1.0+ (or Node.js 18+), AWS CDK, AWS CLI configured
+**Prerequisites**: Node.js 18+, AWS CDK, AWS CLI configured
 
 ## Quick Start
 
@@ -145,11 +145,12 @@ cdko -p MyProfile -s MyApp -m execute
 ```bash
 git clone https://github.com/yourusername/cdko.git
 cd cdko
-bun install
-bun link
+npm install
+npm run build
+npm link
 
 # Run linting
-bun run lint
+npm run lint
 
 # Test in any CDK project
 cdko --help
