@@ -1,3 +1,10 @@
+## [1.0.6](https://github.com/Owloops/cdko/compare/v1.0.5...v1.0.6) (2025-07-15)
+
+
+### Bug Fixes
+
+* default timeout not set ([21c8608](https://github.com/Owloops/cdko/commit/21c860802eeecfe2f7876b22fb56f73432351ccd))
+
 ## [1.0.5](https://github.com/Owloops/cdko/compare/v1.0.4...v1.0.5) (2025-07-15)
 
 
