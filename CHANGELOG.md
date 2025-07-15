@@ -1,3 +1,10 @@
+## [1.0.1](https://github.com/owloops/cdko/compare/v1.0.0...v1.0.1) (2025-07-15)
+
+
+### Bug Fixes
+
+* add required permissions for npm provenance generation ([fe1a24f](https://github.com/owloops/cdko/commit/fe1a24fcdd310dd39fb7f3c2b2a04fb99bbd2105))
+
 # 1.0.0 (2025-07-15)
 
 
