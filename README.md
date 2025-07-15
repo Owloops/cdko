@@ -105,7 +105,7 @@ CDKO's `.cdko.json` automatically maps your patterns (`*MyApp`) to the correct c
 
 ## Environment Variables
 
-- `CDK_TIMEOUT` - Timeout for CDK operations (default: "30m")
+- `CDK_TIMEOUT` - Timeout for CDK operations (default: "not set")
 - `CDK_CLI_NOTICES` - Set to "true" to show CDK notices (default: hidden)
 - `DEBUG` - Enable detailed error traces for troubleshooting
 

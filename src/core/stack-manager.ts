@@ -137,7 +137,7 @@ export class StackManager {
       return {
         version: "0.1",
         stackGroups,
-        cdkTimeout: process.env.CDK_TIMEOUT || "30m",
+        cdkTimeout: process.env.CDK_TIMEOUT,
         suppressNotices: process.env.CDK_CLI_NOTICES !== "true",
         lastUpdated: new Date().toISOString(),
         updatedBy: `cdko@${await this.getCdkoVersion()}`,

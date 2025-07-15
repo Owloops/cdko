@@ -81,10 +81,12 @@ export async function runCdkCommand(
   process.env.AWS_REGION = region;
   process.env.FORCE_COLOR = "1";
 
-  const timeout = process.env.CDK_TIMEOUT || "30m";
-
-  return await $({
+  const cdkProcess = $({
     signal,
     quiet: ["diff", "deploy"].includes(command) ? false : !verbose,
-  })`cdk ${cdkArgs}`.timeout(timeout as Duration);
+  })`cdk ${cdkArgs}`;
+
+  return process.env.CDK_TIMEOUT
+    ? await cdkProcess.timeout(process.env.CDK_TIMEOUT as Duration)
+    : await cdkProcess;
 }

@@ -75,8 +75,9 @@ async function main() {
   const stackManager = new StackManager();
   const config = await stackManager.loadConfig();
 
-  const cdkTimeout = config.cdkTimeout || "30m";
-  process.env.CDK_TIMEOUT = cdkTimeout;
+  if (config.cdkTimeout) {
+    process.env.CDK_TIMEOUT = config.cdkTimeout;
+  }
 
   const regions = stackManager.getRegions(config, args.regions);
 
@@ -123,6 +124,7 @@ ${Object.entries({
   Mode: args.mode,
   Deployment: args.sequential ? "sequential" : "parallel",
   Dependencies: args.includeDeps ? "included" : "excluded",
+  Timeout: process.env.CDK_TIMEOUT || "not set",
 })
   .map(([k, v]) => `${logger.dim(k + ":")} ${v}`)
   .join("\n")}`);
