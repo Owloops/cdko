@@ -60,6 +60,7 @@ jobs:
       
       - name: Build
         env:
+          GITHUB_SHA: ${{ github.sha }}
           BUILD_DATE: ${{ github.event.head_commit.timestamp }}
         run: npm run build
       
@@ -67,4 +68,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          GITHUB_SHA: ${{ github.sha }}
+          BUILD_DATE: ${{ github.event.head_commit.timestamp }}
         run: npx semantic-release
