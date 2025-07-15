@@ -1,3 +1,11 @@
+## [1.0.2](https://github.com/Owloops/cdko/compare/v1.0.1...v1.0.2) (2025-07-15)
+
+
+### Bug Fixes
+
+* correct repository url case for provenance validation ([4286497](https://github.com/Owloops/cdko/commit/428649716d0d719b184178da0e108b84728aade9))
+* github workflow permissions ([934ab28](https://github.com/Owloops/cdko/commit/934ab2840a14c23b0e89376a7ed951f6b7710918))
+
 ## [1.0.1](https://github.com/owloops/cdko/compare/v1.0.0...v1.0.1) (2025-07-15)
 
 
