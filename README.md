@@ -15,7 +15,7 @@ CDKO eliminates the pain of deploying AWS CDK infrastructure across multiple acc
 ## Installation
 
 ```bash
-npm install -g cdko
+npm install -g @owloops/cdko
 ```
 
 **Prerequisites**: Node.js 18+, AWS CDK, AWS CLI configured
