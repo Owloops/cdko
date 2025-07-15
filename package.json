@@ -1,5 +1,5 @@
 {
-  "name": "cdko",
+  "name": "@owloops/cdko",
   "version": "1.0.2",
   "description": "Multi-region AWS CDK deployment tool",
   "type": "module",
