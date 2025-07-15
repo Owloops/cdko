@@ -79,6 +79,7 @@ export async function runCdkCommand(
   cdkArgs.push(stackName);
 
   process.env.AWS_REGION = region;
+  process.env.FORCE_COLOR = "1";
 
   const timeout = process.env.CDK_TIMEOUT || "30m";
 
