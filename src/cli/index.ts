@@ -6,6 +6,8 @@ import { deployToAllRegions } from "../core/orchestrator";
 import { parseArgs, validateArgs, printUsage } from "./args";
 import type { ParsedArgs } from "./args";
 import { init } from "./commands/init";
+import { fileURLToPath } from "url";
+import { dirname, join } from "path";
 
 interface DeploymentResult {
   success: boolean;
@@ -23,11 +25,29 @@ process.on("SIGINT", () => {
   process.exit(130);
 });
 
+async function getVersion(): Promise<string> {
+  try {
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = dirname(__filename);
+    const packagePath = join(__dirname, "..", "..", "package.json");
+    const packageJson = JSON.parse(await fs.readFile(packagePath, "utf-8"));
+    return packageJson.version || "unknown";
+  } catch (error) {
+    return "unknown";
+  }
+}
+
 async function main() {
   const args = parseArgs();
 
   if (args.help) {
     printUsage();
+    process.exit(0);
+  }
+
+  if (args.version) {
+    const version = await getVersion();
+    console.log(version);
     process.exit(0);
   }
 

@@ -152,9 +152,53 @@ npm link
 # Run linting
 npm run lint
 
+# Run tests
+npm test
+
 # Test in any CDK project
 cdko --help
 ```
+
+## Testing
+
+CDKO includes comprehensive integration tests that verify core functionality against real CDK stacks.
+
+### Test Structure
+
+The `test/` directory contains a complete CDK project used as a test fixture:
+
+```
+test/
+├── test/                    # Jest tests
+│   ├── cdko-integration.test.ts  # CDKO CLI integration tests
+│   └── cdko-test-patterns.test.ts # CDK construct tests
+├── cdk.out/                 # Pre-synthesized CDK stacks
+├── package.json             # CDK project dependencies
+└── jest.config.js           # Jest configuration
+```
+
+### Test Coverage
+
+- **Pattern matching** - Wildcard stack selection (`Production-*`)
+- **Multi-region deployment** - Cross-region deployment planning
+- **Configuration generation** - `cdko init` command testing
+- **Error handling** - Invalid patterns and missing parameters
+- **CLI commands** - Help, version, and parameter validation
+
+### Running Tests
+
+```bash
+# Run all tests
+npm test
+
+# Run only integration tests
+cd test && npm test -- --testNamePattern="CDKO"
+
+# Run with coverage
+cd test && npm test -- --coverage
+```
+
+All tests use the `--dry-run` flag to prevent actual AWS deployments, making them safe to run in any environment.
 
 ## License
 

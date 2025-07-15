@@ -10,6 +10,7 @@ export interface ParsedArgs {
   sequential: boolean;
   dryRun: boolean;
   help: boolean;
+  version: boolean;
   verbose: boolean;
   includeDeps: boolean;
   parameters: string[];
@@ -27,6 +28,7 @@ export function parseArgs(): ParsedArgs {
     sequential: argv.x || argv.sequential || false,
     dryRun: argv.d || argv["dry-run"] || false,
     help: argv.h || argv.help || false,
+    version: argv.version || false,
     verbose: argv.v || argv.verbose || false,
     includeDeps: argv["include-deps"] || false,
     parameters: argv.parameters || [],
@@ -119,6 +121,7 @@ Options:
   --cdk-opts "OPTIONS"      Pass CDK command flags directly (for diff/deploy/global flags)
                             Example: --cdk-opts "--force --quiet --outputs-file out.json"
   -h, --help               Show this help message
+  --version                Show version number
 
 Examples:
   ${scriptName} init                                        # Initialize configuration
