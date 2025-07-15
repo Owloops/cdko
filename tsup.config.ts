@@ -9,4 +9,8 @@ export default defineConfig({
   clean: true,
   shims: true,
   external: ["zx"],
+  env: {
+    GITHUB_SHA: process.env.GITHUB_SHA || "",
+    BUILD_DATE: process.env.BUILD_DATE || "",
+  },
 });
