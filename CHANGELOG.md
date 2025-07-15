@@ -1,3 +1,10 @@
+## [1.0.5](https://github.com/Owloops/cdko/compare/v1.0.4...v1.0.5) (2025-07-15)
+
+
+### Bug Fixes
+
+* inject build environment variables via tsup config ([36ea08a](https://github.com/Owloops/cdko/commit/36ea08ae2fe526f0022a01a5023eb66cb0402817))
+
 ## [1.0.4](https://github.com/Owloops/cdko/compare/v1.0.3...v1.0.4) (2025-07-15)
 
 
