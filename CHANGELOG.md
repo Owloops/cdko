@@ -1,3 +1,10 @@
+## [1.0.7](https://github.com/Owloops/cdko/compare/v1.0.6...v1.0.7) (2025-07-24)
+
+
+### Bug Fixes
+
+* update readme with accurate features and clearer structure ([5ab4142](https://github.com/Owloops/cdko/commit/5ab41424d3307e1cd180fe9776efc825bd5fb975))
+
 ## [1.0.6](https://github.com/Owloops/cdko/compare/v1.0.5...v1.0.6) (2025-07-15)
 
 
