@@ -1,3 +1,11 @@
+## [1.0.8](https://github.com/Owloops/cdko/compare/v1.0.7...v1.0.8) (2025-07-28)
+
+
+### Bug Fixes
+
+* synthesize all stacks instead of filtering by pattern ([7961951](https://github.com/Owloops/cdko/commit/79619512f222dfd8daeba9e4c222282f14f7ed6c))
+* update test expectations for non-existent stack patterns ([1b1b7a9](https://github.com/Owloops/cdko/commit/1b1b7a9d6b28966c4235229cc40e38d3a48aa8e7))
+
 ## [1.0.7](https://github.com/Owloops/cdko/compare/v1.0.6...v1.0.7) (2025-07-24)
 
 
