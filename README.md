@@ -10,7 +10,7 @@ CDKO solves this with a simple command:
 
 ```bash
 # Deploy to 6 locations (2 accounts × 3 regions) in parallel
-cdko -p "dev,prod" -s MyStack -r us-east-1,eu-west-1,ap-southeast-1
+cdko -p "dev,staging" -s MyStack -r us-east-1,eu-west-1,ap-southeast-1
 ```
 
 ## Installation
@@ -84,11 +84,11 @@ Pattern matching makes CDKO powerful for complex deployments:
 # Deploy all stacks matching a pattern
 cdko -p MyProfile -s "API*" -r us-east-1,us-west-2
 
-# Deploy across multiple accounts using profile patterns
-cdko -p "dev-*,prod-*" -s MyStack -r all
+# Deploy across multiple staging accounts using profile patterns
+cdko -p "dev-*,staging-*" -s MyStack -r all
 
-# Mix and match patterns
-cdko -p "dev,staging,prod" -s "Frontend*,Backend*" -r us-east-1,eu-west-1
+# Mix and match patterns for non-production environments
+cdko -p "dev,staging" -s "Frontend*,Backend*" -r us-east-1,eu-west-1
 ```
 
 ## CLI Reference
@@ -101,7 +101,7 @@ cdko [options]
 
 | Option | Description |
 |--------|-------------|
-| `-p, --profile` | AWS profile(s) - supports patterns (`dev-*`), lists (`dev,prod`), and wildcards |
+| `-p, --profile` | AWS profile(s) - supports patterns (`dev-*`), lists (`dev,staging`), and wildcards |
 | `-s, --stack` | Stack name pattern to deploy - supports wildcards (`API*`) |
 
 ### Optional Flags
