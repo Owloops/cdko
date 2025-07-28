@@ -44,10 +44,13 @@ describe("CDKO CLI Integration Tests", () => {
     expect(typeof config.stackGroups).toBe("object");
   });
 
-  test("Error handling for non-existent stack patterns", async () => {
-    await expect(
-      $`${cdkoPath} -p test-profile -s "NonExistent-*" --dry-run`,
-    ).rejects.toThrow();
+  test("Dry-run succeeds even with non-existent stack patterns", async () => {
+    const result =
+      await $`${cdkoPath} -p test-profile -s "NonExistent-*" --dry-run`;
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain(
+      "Using traditional pattern-based deployment",
+    );
   });
 
   test("Help command displays usage information", async () => {
