@@ -4,7 +4,6 @@ import { join } from "path";
 import { logger } from "../utils/logger";
 
 interface SynthesizeOptions {
-  stacks?: string;
   profile?: string;
   environment?: string;
   outputDir?: string;
@@ -22,7 +21,7 @@ export class CloudAssemblyManager {
   }
 
   async synthesize(options: SynthesizeOptions = {}): Promise<string> {
-    const { stacks = "*", profile, environment, outputDir } = options;
+    const { profile, environment, outputDir } = options;
     const cloudAssemblyPath = outputDir
       ? join(process.cwd(), outputDir)
       : this.getCloudAssemblyPath();
@@ -41,10 +40,6 @@ export class CloudAssemblyManager {
 
       if (process.env.CDK_CLI_NOTICES !== "true") {
         cdkArgs.push("--no-notices");
-      }
-
-      if (stacks !== "*") {
-        cdkArgs.push(stacks);
       }
 
       cdkArgs.push("--output", cloudAssemblyPath);

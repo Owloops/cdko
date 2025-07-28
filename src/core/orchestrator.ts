@@ -181,7 +181,6 @@ export async function deployToAllRegions(
       try {
         const cloudAssembly = new CloudAssemblyManager();
         const assemblyPath = await cloudAssembly.synthesize({
-          stacks: args.stackPattern,
           profile: profile,
           environment: args.environment,
           outputDir: `cdk.out-${profile}`,
@@ -215,7 +214,6 @@ export async function deployToAllRegions(
     try {
       const cloudAssembly = new CloudAssemblyManager();
       const assemblyPath = await cloudAssembly.synthesize({
-        stacks: args.stackPattern,
         profile: args.profile,
         environment: args.environment,
       });
