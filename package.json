@@ -39,7 +39,6 @@
     "url": "https://github.com/Owloops/cdko/issues"
   },
   "dependencies": {
-    "minimatch": "^10.0.3",
     "zx": "^8.6.2"
   },
   "engines": {

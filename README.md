@@ -272,7 +272,6 @@ All tests use the `--dry-run` flag to prevent actual AWS deployments.
 ## Acknowledgments
 
 - [zx](https://github.com/google/zx) - Shell scripting for Node.js
-- [minimatch](https://github.com/isaacs/minimatch) - Glob pattern matching
 - [aws-cdk](https://github.com/aws/aws-cdk) - AWS Cloud Development Kit
 
 ## License

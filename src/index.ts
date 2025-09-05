@@ -7,3 +7,4 @@ export { deployToAllRegions } from "./core/orchestrator";
 
 export { logger } from "./utils/logger";
 export { checkPrerequisites } from "./utils/prerequisites";
+export { matchPattern } from "./utils/pattern-matcher";

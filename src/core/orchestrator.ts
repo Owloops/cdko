@@ -52,7 +52,6 @@ async function executeCommand(
     command,
     deployment.profile || args.profile,
     options,
-    deployment.accountId,
     deployment.profile || args.profile,
   );
 }

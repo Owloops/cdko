@@ -1,6 +1,6 @@
 import { $ } from "zx";
 import fs from "fs/promises";
-import { minimatch } from "minimatch";
+import { matchPattern } from "../utils/pattern-matcher";
 import { logger } from "../utils/logger";
 
 interface StackDeployment {
@@ -204,7 +204,7 @@ export class StackManager {
       for (const [stackGroupName, deployments] of Object.entries(
         stackConfig.stackGroups,
       )) {
-        if (minimatch(stackGroupName, pattern)) {
+        if (matchPattern(stackGroupName, pattern)) {
           matchedGroups.push({
             name: stackGroupName,
             pattern: pattern,

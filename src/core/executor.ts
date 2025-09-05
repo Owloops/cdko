@@ -150,7 +150,6 @@ export async function runCdkCommand(
   command: string,
   profile: string,
   options: CdkCommandOptions = {},
-  accountId?: string,
   deploymentProfile?: string,
 ): Promise<CdkCommandResult> {
   const {

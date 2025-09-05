@@ -1,5 +1,5 @@
 import { $ } from "zx";
-import { minimatch } from "minimatch";
+import { matchPattern } from "../utils/pattern-matcher";
 import { logger } from "../utils/logger";
 
 interface AccountInfo {
@@ -25,11 +25,9 @@ interface FailedAccountInfo {
 type AccountResult = AccountInfo | FailedAccountInfo;
 
 export class AccountManager {
-  private configPath: string;
   private accountCache: Map<string, AccountInfo>;
 
-  constructor(configPath = ".cdko.json") {
-    this.configPath = configPath;
+  constructor() {
     this.accountCache = new Map();
   }
 
@@ -54,7 +52,7 @@ export class AccountManager {
     for (const pattern of patterns) {
       if (availableProfiles.length > 0) {
         for (const profile of availableProfiles) {
-          if (minimatch(profile, pattern)) {
+          if (matchPattern(profile, pattern)) {
             if (!matchedProfiles.includes(profile)) {
               matchedProfiles.push(profile);
             }
