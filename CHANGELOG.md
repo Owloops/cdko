@@ -1,3 +1,10 @@
+## [1.0.10](https://github.com/Owloops/cdko/compare/v1.0.9...v1.0.10) (2025-09-05)
+
+
+### Bug Fixes
+
+* replace minimatch with native pattern matcher ([c7288b4](https://github.com/Owloops/cdko/commit/c7288b488e85a013dcba7d515ce351f144ab25c4))
+
 ## [1.0.9](https://github.com/Owloops/cdko/compare/v1.0.8...v1.0.9) (2025-09-05)
 
 
