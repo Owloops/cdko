@@ -21,6 +21,6 @@ export async function checkPrerequisites() {
 
   try {
     const cdkVersion = await $`cdk --version`.quiet();
-    logger.info(`Using CDK version: ${cdkVersion.toString().trim()}`);
+    logger.subheader(`Using CDK version: ${cdkVersion.toString().trim()}`);
   } catch {}
 }

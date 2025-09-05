@@ -72,11 +72,11 @@ export class AccountManager {
       return patterns;
     }
 
-    logger.info(
-      `Found ${
-        matchedProfiles.length
-      } profile(s) matching pattern: ${matchedProfiles.join(", ")}`,
-    );
+    if (matchedProfiles.length > 1) {
+      logger.info(
+        `Found ${matchedProfiles.length} profile(s) matching pattern: ${matchedProfiles.join(", ")}`,
+      );
+    }
     return matchedProfiles;
   }
 
@@ -86,8 +86,6 @@ export class AccountManager {
     }
 
     try {
-      logger.info(`Discovering account for profile: ${profile}`);
-
       const result =
         await $`aws sts get-caller-identity --profile ${profile} --output json`.quiet();
       const identity = JSON.parse(result.stdout);
@@ -100,7 +98,6 @@ export class AccountManager {
       };
 
       this.accountCache.set(profile, accountInfo);
-      logger.info(`Profile ${profile} → Account ${identity.Account}`);
 
       return accountInfo;
     } catch (error) {
@@ -120,8 +117,6 @@ export class AccountManager {
   }
 
   async getMultiAccountInfo(profiles: string[]): Promise<AccountInfo[]> {
-    logger.info(`Discovering accounts for ${profiles.length} profile(s)...`);
-
     const accountPromises = profiles.map((profile: string) =>
       this.getAccountInfo(profile).catch(
         (error): FailedAccountInfo => ({

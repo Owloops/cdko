@@ -28,13 +28,10 @@ export class CloudAssemblyManager {
 
     try {
       if (existsSync(cloudAssemblyPath)) {
-        logger.info(`Cleaning existing cloud assembly at ${cloudAssemblyPath}`);
         rmSync(cloudAssemblyPath, { recursive: true, force: true });
       }
 
       mkdirSync(cloudAssemblyPath, { recursive: true });
-
-      logger.info("Synthesizing cloud assembly...");
 
       const cdkArgs = ["synth"];
 
@@ -55,7 +52,6 @@ export class CloudAssemblyManager {
       const result = await $({ quiet: true })`cdk ${cdkArgs}`;
 
       if (result.exitCode === 0) {
-        logger.success(`Cloud assembly synthesized to ${cloudAssemblyPath}`);
         this.cloudAssemblyPath = cloudAssemblyPath;
         return cloudAssemblyPath;
       } else {

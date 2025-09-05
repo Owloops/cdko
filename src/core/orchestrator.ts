@@ -36,6 +36,25 @@ interface DeploymentResult {
   duration?: string;
   error?: unknown;
   status?: string;
+  synthesisTime?: number;
+  deploymentTime?: number;
+}
+
+async function executeCommand(
+  deployment: Deployment,
+  args: DeploymentArgs,
+  command: string,
+  options: any,
+): Promise<void> {
+  await runCdkCommand(
+    deployment.region,
+    deployment.constructId,
+    command,
+    deployment.profile || args.profile,
+    options,
+    deployment.accountId,
+    deployment.profile || args.profile,
+  );
 }
 
 export async function deployStack(
@@ -44,68 +63,59 @@ export async function deployStack(
   signal: AbortSignal,
   cloudAssemblyPath: string | null = null,
 ): Promise<DeploymentResult> {
-  const { region, constructId, stackName, profile } = deployment;
-  const deployProfile = profile || args.profile;
-
-  console.log();
-  console.log(`${logger.region(region)} → ${logger.stack(stackName)}`);
+  const { region, constructId, stackName } = deployment;
 
   if (args.dryRun) {
-    logger.info(`Would deploy: ${constructId} to ${region}`);
+    console.log(`  [${region}] Would deploy: ${constructId}`);
     return { success: true, region, stackName };
   }
 
   const startTime = Date.now();
 
   try {
-    const executorOptions = {
-      ...args,
-      signal,
-      cloudAssemblyPath,
-    };
+    const executorOptions = { ...args, signal, cloudAssemblyPath };
 
     switch (args.mode) {
       case "diff":
-        await runCdkCommand(
-          region,
-          constructId,
-          "diff",
-          deployProfile,
-          executorOptions,
-        );
+        console.log(`  [${region}] Showing differences for ${stackName}`);
+        await executeCommand(deployment, args, "diff", executorOptions);
         break;
 
       case "changeset":
-        logger.info(`Creating changeset for ${stackName}`);
-        await runCdkCommand(
-          region,
-          constructId,
-          "deploy",
-          deployProfile,
-          executorOptions,
-        );
-        logger.success("Changeset created");
+        console.log(`  [${region}] Creating changeset for ${stackName}`);
+        await executeCommand(deployment, args, "deploy", executorOptions);
         break;
 
       case "execute":
-        logger.info(`Deploying ${stackName}`);
-        const executeOptions = { ...executorOptions, executeChangeset: true };
-        await runCdkCommand(
-          region,
-          constructId,
-          "deploy",
-          deployProfile,
-          executeOptions,
-        );
-        logger.success(`Deployed ${stackName}`);
+        console.log(`  [${region}] Deploying ${stackName}`);
+        await executeCommand(deployment, args, "deploy", {
+          ...executorOptions,
+          executeChangeset: true,
+        });
         break;
     }
 
     const duration = ((Date.now() - startTime) / 1000).toFixed(1);
-    logger.info(`Completed in ${duration}s`);
+
+    let completionMessage;
+    switch (args.mode) {
+      case "diff":
+        completionMessage = `Changes detected (${duration}s)`;
+        break;
+      case "changeset":
+        completionMessage = `Changeset created (${duration}s)`;
+        break;
+      case "execute":
+        completionMessage = `Deployment completed (${duration}s)`;
+        break;
+      default:
+        completionMessage = `Completed (${duration}s)`;
+    }
+
+    console.log(`  [${region}] ${completionMessage}`);
     return { success: true, region, stackName, duration };
   } catch (e) {
-    logger.error(`Failed to deploy ${stackName}`);
+    logger.error(`[${region}] Failed: ${stackName}`);
     return { success: false, region, stackName, error: e };
   }
 }
@@ -173,12 +183,12 @@ export async function deployToAllRegions(
       ...new Set(deployments.map((d) => d.profile || args.profile)),
     ];
 
-    logger.info(
-      `Synthesizing cloud assemblies for ${uniqueProfiles.length} profile(s)...`,
-    );
+    logger.phase("Synthesis", "");
 
     const synthesisPromises = uniqueProfiles.map(async (profile) => {
       try {
+        console.log(`  [${profile}] Synthesizing cloud assembly...`);
+
         const cloudAssembly = new CloudAssemblyManager();
         const assemblyPath = await cloudAssembly.synthesize({
           profile: profile,
@@ -186,16 +196,13 @@ export async function deployToAllRegions(
           outputDir: `cdk.out-${profile}`,
         });
         profileAssemblies.set(profile, assemblyPath);
-        logger.success(
-          `Cloud assembly for profile ${profile} → ${assemblyPath}`,
-        );
+        const shortPath = assemblyPath.split("/").pop() || assemblyPath;
+        console.log(`  [${profile}] Cloud assembly synthesized (${shortPath})`);
         return { profile, assemblyPath, success: true };
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : String(error);
-        logger.error(
-          `Failed to synthesize for profile ${profile}: ${errorMessage}`,
-        );
+        logger.error(`[${profile}] Failed to synthesize: ${errorMessage}`);
         return { profile, error, success: false };
       }
     });
@@ -212,12 +219,21 @@ export async function deployToAllRegions(
     }
   } else {
     try {
+      console.log();
+      logger.phase("Synthesis", "");
+      console.log(`  [${args.profile}] Synthesizing cloud assembly...`);
+
       const cloudAssembly = new CloudAssemblyManager();
       const assemblyPath = await cloudAssembly.synthesize({
         profile: args.profile,
         environment: args.environment,
       });
       profileAssemblies.set(args.profile, assemblyPath);
+
+      const shortPath = assemblyPath.split("/").pop() || assemblyPath;
+      console.log(
+        `  [${args.profile}] Cloud assembly synthesized (${shortPath})`,
+      );
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
@@ -226,35 +242,38 @@ export async function deployToAllRegions(
     }
   }
 
-  if (!isMultiAccount) {
-    console.log();
-    logger.info(`Planning to deploy ${deployments.length} stack(s):`);
-    const stackGroups: { [key: string]: string[] } = {};
-    deployments.forEach((d) => {
-      if (!stackGroups[d.stackName]) {
-        stackGroups[d.stackName] = [];
-      }
-      stackGroups[d.stackName]!.push(d.region);
-    });
-
-    Object.entries(stackGroups).forEach(([stack, regions]) => {
-      logger.info(`${stack} → ${regions.join(", ")}`);
-    });
-  }
-
   const results: DeploymentResult[] = [];
+
+  console.log();
+  logger.info(`Planning to deploy ${deployments.length} stack(s):`);
+  deployments.forEach((deployment) => {
+    console.log(`• ${deployment.stackName} → ${deployment.region}`);
+  });
+  console.log(
+    `• Processing ${deployments.length} deployment(s) in ${args.sequential ? "sequential" : "parallel"}...`,
+  );
+
+  console.log();
+  logger.phase("Execution", "");
 
   if (args.sequential) {
     for (const deployment of deployments) {
+      const prefix = deployment.profile
+        ? `${deployment.profile}/${deployment.region}`
+        : deployment.region;
+      console.log(`  [${prefix}] Starting deployment...`);
       const assemblyPath = profileAssemblies.get(
         deployment.profile || args.profile,
       );
       results.push(await deployStack(deployment, args, signal, assemblyPath));
     }
   } else {
-    logger.info(
-      `Processing ${deployments.length} deployment(s) in parallel...`,
-    );
+    deployments.forEach((deployment) => {
+      const prefix = deployment.profile
+        ? `${deployment.profile}/${deployment.region}`
+        : deployment.region;
+      console.log(`  [${prefix}] Starting deployment...`);
+    });
 
     const deploymentPromises = deployments.map((deployment) => {
       const assemblyPath = profileAssemblies.get(
@@ -301,14 +320,25 @@ export async function deployToAllRegions(
         const meaningfulError =
           lines.find(
             (line: string) =>
-              line.includes("No stacks match") ||
-              line.includes("already exists") ||
+              line.includes("no credentials have been configured") ||
+              line.includes("credentials have expired") ||
+              line.includes("Unable to locate credentials") ||
               line.includes("AccessDenied") ||
               line.includes("is not authorized") ||
+              line.includes("No stacks match") ||
+              line.includes("already exists") ||
               line.includes("CloudFormation error") ||
               line.includes("Error:") ||
               line.includes("failed:"),
           ) ||
+          lines
+            .reverse()
+            .find(
+              (line: string) =>
+                line.includes("no credentials") ||
+                line.includes("credentials") ||
+                !line.startsWith("[Warning"),
+            ) ||
           lines[0] ||
           "Check output above for details";
 
@@ -351,8 +381,6 @@ async function resolveMultiAccountDeployments(
   const allDeployments: Deployment[] = [];
 
   if (matchedStacks.length === 0) {
-    logger.info("No stack configuration found, using pattern-based deployment");
-
     deploymentTargets.forEach(({ profile, accountId, region }) => {
       allDeployments.push({
         profile,
@@ -364,8 +392,6 @@ async function resolveMultiAccountDeployments(
       });
     });
   } else {
-    logger.info(`Found ${matchedStacks.length} stack(s) matching pattern`);
-
     matchedStacks.forEach((stackGroup) => {
       deploymentTargets.forEach(({ profile, accountId, region, key }) => {
         if (stackGroup.deployments[key]) {
@@ -409,30 +435,9 @@ async function resolveMultiAccountDeployments(
 }
 
 function logMultiAccountDeploymentSummary(deployments: Deployment[]) {
-  console.log();
-  logger.info(`Planning ${deployments.length} deployment(s):`);
-
-  const stackGroups: { [key: string]: Deployment[] } = {};
-  deployments.forEach((deployment) => {
-    if (!stackGroups[deployment.stackName]) {
-      stackGroups[deployment.stackName] = [];
-    }
-    stackGroups[deployment.stackName]!.push(deployment);
-  });
-
-  Object.entries(stackGroups).forEach(([stackName, stackDeployments]) => {
-    const targets = stackDeployments
-      .map((d) => `${d.accountId}/${d.region}`)
-      .join(", ");
-    logger.info(`${stackName} → ${targets}`);
-  });
-
   const accounts = [...new Set(deployments.map((d) => d.accountId))];
-  const profiles = [...new Set(deployments.map((d) => d.profile))];
 
-  console.log();
-  logger.info(`Using ${profiles.length} profile(s): ${profiles.join(", ")}`);
   logger.info(
-    `Targeting ${accounts.length} account(s): ${accounts.join(", ")}`,
+    `${deployments.length} deployment(s) across ${accounts.length} account(s)`,
   );
 }

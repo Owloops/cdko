@@ -22,7 +22,7 @@ describe("CDKO CLI Integration Tests", () => {
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toContain("Production-*");
     expect(result.stdout).toContain(
-      "Dry run completed - no actual changes made",
+      "DRY RUN MODE - No actual deployments will occur",
     );
   });
 

@@ -99,60 +99,64 @@ async function main() {
     process.exit(1);
   }
 
-  console.log();
-  const modeMessages = {
-    diff: "Showing differences",
-    changeset: "Creating changesets",
-    execute: "Deploying stacks",
-  };
-  logger.info(
-    modeMessages[args.mode as keyof typeof modeMessages] || "Processing stacks",
-  );
-
   const results = await deployToAllRegions(regions, args, controller.signal);
 
   displayResults(args, results);
 }
 
 function displayHeader(args: ParsedArgs, regions: string[]) {
-  console.log(`
-Multi-Region CDK Deployment
-${Object.entries({
-  Profile: args.profile,
-  Stack: args.stackPattern,
-  Regions: regions.join(" "),
-  Mode: args.mode,
-  Deployment: args.sequential ? "sequential" : "parallel",
-  Dependencies: args.includeDeps ? "included" : "excluded",
-  Timeout: process.env.CDK_TIMEOUT || "not set",
-})
-  .map(([k, v]) => `${logger.dim(k + ":")} ${v}`)
-  .join("\n")}`);
+  logger.header("CDKO: Multi-Region Deployment");
+  console.log();
+
+  logger.subheader("Configuration:");
+  const config = [
+    `  Profile: ${args.profile}`,
+    `  Stack:   ${args.stackPattern}`,
+    `  Regions: ${regions.join(", ")}`,
+    `  Mode:    ${args.mode}`,
+    `  Deployment: ${args.sequential ? "sequential" : "parallel"}`,
+    `  Dependencies: ${args.includeDeps ? "included" : "excluded"}`,
+    `  Timeout: ${process.env.CDK_TIMEOUT || "not set"}`,
+  ];
+  console.log(config.join("\n"));
 }
 
 function displayResults(args: ParsedArgs, results: DeploymentResult[]) {
-  const failedRegions = results.filter((r) => !r.success);
-
-  if (failedRegions.length > 0) {
-    console.log();
-    logger.error(`${failedRegions.length} region(s) failed`);
-    process.exit(1);
-  }
+  const successful = results.filter((r) => r.success);
+  const failed = results.filter((r) => !r.success);
 
   console.log();
+  logger.phase("Summary", "");
 
-  if (args.dryRun) {
-    logger.success("Dry run completed - no actual changes made");
-  } else if (args.mode === "changeset") {
-    logger.success("Changesets created for review in CloudFormation console");
-    logger.info("Execute changesets manually after review");
-  } else if (args.mode === "execute") {
-    const totalDuration = results
+  const status = failed.length > 0 ? "FAILURE" : "SUCCESS";
+
+  console.log(
+    `  Status: ${failed.length > 0 ? logger.dim("❌") : logger.dim("✅")} ${status}`,
+  );
+  console.log(`  Stacks processed: ${results.length}`);
+  console.log(`  Successful: ${successful.length}`);
+
+  if (args.mode === "diff") {
+    console.log(`  With changes: ${successful.length}`);
+  }
+
+  if (failed.length > 0) {
+    console.log(`  Failed: ${failed.length}`);
+  }
+
+  if (successful.length > 0 && successful.some((r) => r.duration)) {
+    const totalDuration = successful
       .filter((r) => r.duration)
       .reduce((sum, r) => sum + parseFloat(r.duration!), 0);
-    logger.success(`All deployments completed in ${totalDuration.toFixed(1)}s`);
-  } else {
-    logger.success("Differences shown for all regions");
+
+    const minutes = Math.floor(totalDuration / 60);
+    const seconds = Math.floor(totalDuration % 60);
+    const timeStr = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
+    console.log(`  Total time: ${timeStr}`);
+  }
+
+  if (failed.length > 0) {
+    process.exit(1);
   }
 }
 
