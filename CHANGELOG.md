@@ -1,3 +1,10 @@
+## [1.0.9](https://github.com/Owloops/cdko/compare/v1.0.8...v1.0.9) (2025-09-05)
+
+
+### Bug Fixes
+
+* add consistent profile/region prefixes and improved output filtering for multi-account deployments ([b08571e](https://github.com/Owloops/cdko/commit/b08571e6f500a68e47466efec20286c091d6f265))
+
 ## [1.0.8](https://github.com/Owloops/cdko/compare/v1.0.7...v1.0.8) (2025-07-28)
 
 
