@@ -44,13 +44,15 @@ describe("CDKO CLI Integration Tests", () => {
     expect(typeof config.stackGroups).toBe("object");
   });
 
-  test("Dry-run succeeds even with non-existent stack patterns", async () => {
-    const result =
+  test("Dry-run fails with non-existent stack patterns", async () => {
+    try {
       await $`${cdkoPath} -p test-profile -s "NonExistent-*" --dry-run`;
-    expect(result.exitCode).toBe(0);
-    expect(result.stdout).toContain(
-      "Using traditional pattern-based deployment",
-    );
+      fail("Expected command to fail");
+    } catch (error: unknown) {
+      const processError = error as { exitCode: number; stderr: string };
+      expect(processError.exitCode).not.toBe(0);
+      expect(processError.stderr).toContain("No stacks match");
+    }
   });
 
   test("Help command displays usage information", async () => {
