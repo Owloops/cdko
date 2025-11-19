@@ -1,3 +1,11 @@
+## [1.0.11](https://github.com/Owloops/cdko/compare/v1.0.10...v1.0.11) (2025-11-19)
+
+
+### Bug Fixes
+
+* pass stack names to cdk synth for cross-account compatibility ([3c1f9c3](https://github.com/Owloops/cdko/commit/3c1f9c3f7d46ca83e0f367aaa8cda96804a22cbd))
+* prettier formatting ([a1fff58](https://github.com/Owloops/cdko/commit/a1fff58e5629daaf305fce1446b96a2111111cb5))
+
 ## [1.0.10](https://github.com/Owloops/cdko/compare/v1.0.9...v1.0.10) (2025-09-05)
 
 
