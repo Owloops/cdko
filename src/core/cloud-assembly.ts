@@ -23,7 +23,13 @@ export class CloudAssemblyManager {
   }
 
   async synthesize(options: SynthesizeOptions = {}): Promise<string> {
-    const { profile, environment, outputDir, stacks, exclusively = true } = options;
+    const {
+      profile,
+      environment,
+      outputDir,
+      stacks,
+      exclusively = true,
+    } = options;
     const cloudAssemblyPath = outputDir
       ? join(process.cwd(), outputDir)
       : this.getCloudAssemblyPath();

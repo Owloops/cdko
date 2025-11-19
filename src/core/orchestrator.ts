@@ -158,7 +158,7 @@ export async function deployToAllRegions(
 
     if (deployments.length === 0) {
       logger.info("Using traditional pattern-based deployment");
-      const stackPatterns = args.stackPattern.split(",").map(s => s.trim());
+      const stackPatterns = args.stackPattern.split(",").map((s) => s.trim());
       for (const region of regions) {
         for (const stackName of stackPatterns) {
           deployments.push({
@@ -190,8 +190,12 @@ export async function deployToAllRegions(
       try {
         console.log(`  [${profile}] Synthesizing cloud assembly...`);
 
-        const profileDeployments = deployments.filter(d => d.profile === profile);
-        const stacksForProfile = [...new Set(profileDeployments.map(d => d.constructId))];
+        const profileDeployments = deployments.filter(
+          (d) => d.profile === profile,
+        );
+        const stacksForProfile = [
+          ...new Set(profileDeployments.map((d) => d.constructId)),
+        ];
 
         const cloudAssembly = new CloudAssemblyManager();
         const assemblyPath = await cloudAssembly.synthesize({
@@ -229,7 +233,9 @@ export async function deployToAllRegions(
       logger.phase("Synthesis", "");
       console.log(`  [${args.profile}] Synthesizing cloud assembly...`);
 
-      const stacksForProfile = [...new Set(deployments.map(d => d.constructId))];
+      const stacksForProfile = [
+        ...new Set(deployments.map((d) => d.constructId)),
+      ];
 
       const cloudAssembly = new CloudAssemblyManager();
       const assemblyPath = await cloudAssembly.synthesize({
