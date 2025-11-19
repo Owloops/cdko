@@ -7,6 +7,8 @@ interface SynthesizeOptions {
   profile?: string;
   environment?: string;
   outputDir?: string;
+  stacks?: string[];
+  exclusively?: boolean;
 }
 
 export class CloudAssemblyManager {
@@ -21,7 +23,7 @@ export class CloudAssemblyManager {
   }
 
   async synthesize(options: SynthesizeOptions = {}): Promise<string> {
-    const { profile, environment, outputDir } = options;
+    const { profile, environment, outputDir, stacks, exclusively = true } = options;
     const cloudAssemblyPath = outputDir
       ? join(process.cwd(), outputDir)
       : this.getCloudAssemblyPath();
@@ -34,6 +36,14 @@ export class CloudAssemblyManager {
       mkdirSync(cloudAssemblyPath, { recursive: true });
 
       const cdkArgs = ["synth"];
+
+      if (stacks && stacks.length > 0) {
+        cdkArgs.push(...stacks);
+      }
+
+      if (exclusively && stacks && stacks.length > 0) {
+        cdkArgs.push("--exclusively");
+      }
 
       if (process.env.CDK_CLI_NOTICES !== "true") {
         cdkArgs.push("--no-notices");
