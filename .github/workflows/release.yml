@@ -71,9 +71,6 @@ jobs:
       - name: Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Kept as fallback until trusted publishing is verified;
-          # remove NPM_TOKEN afterwards.
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           GITHUB_SHA: ${{ github.sha }}
           BUILD_DATE: ${{ github.event.head_commit.timestamp }}
         run: npx semantic-release
